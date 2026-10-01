@@ -25,53 +25,65 @@ export default function TuHocPage() {
 
     // Khi chưa chọn tài liệu (Hiển thị Thư viện Thẻ)
     if (!selectedDoc) {
+        const gradients = [
+            "from-violet-500 to-purple-600 shadow-purple-500/30",
+            "from-emerald-400 to-teal-500 shadow-teal-500/30",
+            "from-rose-400 to-red-500 shadow-rose-500/30",
+            "from-amber-400 to-orange-500 shadow-orange-500/30",
+            "from-blue-500 to-indigo-600 shadow-blue-500/30",
+            "from-fuchsia-500 to-pink-600 shadow-pink-500/30"
+        ];
+
         return (
-            <div className="w-full max-w-[1600px] mx-auto p-4 md:p-8 min-h-[calc(100vh-64px)]">
+            <div className="w-full max-w-[1600px] mx-auto p-4 md:p-8 min-h-[calc(100vh-64px)] relative z-10">
                 <div className="mb-10 text-center space-y-3">
-                    <h1 className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-600">
+                    <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600">
                         Thư Viện Bài Giảng
                     </h1>
-                    <p className="text-slate-500 font-medium">Chọn một bài học dưới đây để bắt đầu hành trình chinh phục Tin học</p>
+                    <p className="text-slate-600 font-medium text-lg">Chọn một bài học dưới đây để bắt đầu hành trình chinh phục Tin học</p>
                 </div>
 
                 <div className="space-y-12">
-                    {Object.keys(docsTree).sort().map(week => (
+                    {Object.keys(docsTree).sort().map((week, weekIdx) => (
                         <div key={week} className="space-y-6">
                             <div className="flex items-center gap-4">
-                                <h2 className="text-xl font-black text-slate-800 uppercase tracking-widest">{week}</h2>
-                                <div className="h-px bg-slate-200 flex-1"></div>
+                                <h2 className="text-2xl font-black text-slate-800 uppercase tracking-widest">{week}</h2>
+                                <div className="h-1 bg-gradient-to-r from-slate-200 to-transparent flex-1 rounded-full"></div>
                             </div>
                             
                             {docsTree[week].length === 0 ? (
-                                <div className="p-8 text-center border-2 border-dashed border-slate-200 rounded-3xl">
-                                    <p className="text-slate-400 italic">Tuần này chưa có tài liệu, bạn quay lại sau nhé!</p>
+                                <div className="p-8 text-center border-2 border-dashed border-slate-300 bg-white/50 backdrop-blur-sm rounded-3xl">
+                                    <p className="text-slate-500 font-bold">Tuần này chưa có tài liệu, bạn quay lại sau nhé!</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {docsTree[week].map((doc: any) => (
-                                        <button
-                                            key={doc.url}
-                                            onClick={() => setSelectedDoc(doc)}
-                                            className="group relative bg-white rounded-3xl p-6 border border-slate-200 shadow-md shadow-slate-200/50 hover:shadow-2xl hover:shadow-indigo-500/20 hover:-translate-y-1.5 transition-all duration-300 text-left flex flex-col h-48 overflow-hidden"
-                                        >
-                                            {/* Trang trí nền góc phải */}
-                                            <div className="absolute -right-6 -top-6 w-24 h-24 bg-gradient-to-br from-indigo-50 to-cyan-50 rounded-full group-hover:scale-150 transition-transform duration-500 -z-0"></div>
-                                            
-                                            <div className="relative z-10 flex-1">
-                                                <div className="w-12 h-12 bg-indigo-100 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-indigo-600 group-hover:text-white transition-colors duration-300 shadow-inner">
-                                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                                    {docsTree[week].map((doc: any, docIdx: number) => {
+                                        const gradient = gradients[(weekIdx * 10 + docIdx) % gradients.length];
+                                        return (
+                                            <button
+                                                key={doc.url}
+                                                onClick={() => setSelectedDoc(doc)}
+                                                className={`group relative bg-gradient-to-br ${gradient} rounded-3xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-left flex flex-col h-56 overflow-hidden border border-white/20`}
+                                            >
+                                                {/* Trang trí nền góc phải */}
+                                                <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/20 rounded-full group-hover:scale-[2] transition-transform duration-700 blur-2xl pointer-events-none"></div>
+                                                
+                                                <div className="relative z-10 flex-1">
+                                                    <div className="w-14 h-14 bg-white/20 backdrop-blur-md text-white rounded-2xl flex items-center justify-center mb-4 group-hover:bg-white group-hover:text-slate-800 transition-colors duration-300 shadow-inner border border-white/30">
+                                                        <svg className="w-7 h-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                                                    </div>
+                                                    <h3 className="font-bold text-white text-xl leading-tight drop-shadow-md line-clamp-3">
+                                                        {doc.name.replace('.pdf', '').replace(/_/g, ' ')}
+                                                    </h3>
                                                 </div>
-                                                <h3 className="font-bold text-slate-700 text-lg leading-snug group-hover:text-indigo-700 line-clamp-2">
-                                                    {doc.name.replace('.pdf', '').replace(/_/g, ' ')}
-                                                </h3>
-                                            </div>
-                                            
-                                            <div className="relative z-10 flex items-center gap-2 text-xs font-bold text-slate-400 group-hover:text-indigo-500 mt-4 transition-colors">
-                                                <span>Bấm để đọc</span>
-                                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
-                                            </div>
-                                        </button>
-                                    ))}
+                                                
+                                                <div className="relative z-10 flex items-center gap-2 text-sm font-black text-white/80 group-hover:text-white mt-4 transition-colors">
+                                                    <span>Bấm để học ngay</span>
+                                                    <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
+                                                </div>
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             )}
                         </div>

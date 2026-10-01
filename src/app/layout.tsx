@@ -26,9 +26,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 min-h-screen flex flex-col selection:bg-indigo-500/20`}>
+      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 min-h-screen flex flex-col selection:bg-indigo-500/20 relative overflow-x-hidden`}>
+        
+        {/* Colorful Background Blobs */}
+        <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+            <div className="absolute -top-[10%] -left-[10%] w-[40%] h-[40%] rounded-full bg-fuchsia-500/20 blur-[120px]"></div>
+            <div className="absolute top-[20%] -right-[10%] w-[40%] h-[50%] rounded-full bg-cyan-500/20 blur-[120px]"></div>
+            <div className="absolute -bottom-[10%] left-[20%] w-[50%] h-[40%] rounded-full bg-amber-500/20 blur-[120px]"></div>
+        </div>
+
         {/* Navigation Bar */}
-        <header className="bg-white/80 backdrop-blur-xl border-b border-slate-200 shadow-sm sticky top-0 z-50">
+        <header className="bg-white/70 backdrop-blur-2xl border-b border-white/50 shadow-sm sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               
