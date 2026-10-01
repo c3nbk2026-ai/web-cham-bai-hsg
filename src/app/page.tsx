@@ -136,15 +136,19 @@ sys.stdout = io.StringIO()
 
       setResults(testResults);
 
+      const firstError = testResults.find(r => r.err)?.err || (passedCount < testCases.length ? "Sai Logic / Không khớp Output" : "Hoàn hảo");
+
       await fetch('/api/sheets', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
               studentName,
               week,
+              category,
               problem,
               score: passedCount,
               maxScore: testCases.length,
+              errorMsg: firstError,
               code: code
           })
       });
