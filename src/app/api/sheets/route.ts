@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
@@ -35,9 +35,13 @@ export async function POST(req: Request) {
         const soTestSai = maxScore - score;
         const diem = maxScore > 0 ? ((score / maxScore) * 10).toFixed(1) : "0.0";
 
+        let targetRange = 'BangDiem_DaiTra!A:K';
+        if (mode === 'DOI_TUYEN') targetRange = 'BangDiem_DoiTuyen!A:K';
+        else if (mode === 'DE_THI') targetRange = 'BangDiem_KiemTra!A:K';
+
         await sheets.spreadsheets.values.append({
             spreadsheetId: SPREADSHEET_ID,
-            range: mode === 'DOI_TUYEN' ? 'BangDiem_DoiTuyen!A:K' : 'BangDiem_DaiTra!A:K',
+            range: targetRange,
             valueInputOption: 'USER_ENTERED',
             requestBody: {
                 values: [[
