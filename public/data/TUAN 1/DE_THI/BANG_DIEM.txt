@@ -1,0 +1,11 @@
+==========================================================================================
+FILE BÀI LÀM                   | BÀI TẬP    | ĐIỂM       | CHI TIẾT LỖI
+==========================================================================================
+NUMPRIME.py                    | NUMPRIME   |  0.0/10.0 | Test01(WA), Test02(WA), Test03(WA), Test04(WA), Test05(WA), Test06(WA), Test07(WA), Test08(WA), Test09(WA), Test10(WA), Test11(WA), Test12(WA), Test13(WA), Test14(WA), Test15(WA), Test16(WA), Test17(WA), Test18(WA), Test19(WA), Test20(WA)
+==========================================================================================
+
+CHÚ THÍCH:
+ - AC (Accepted) : Test đúng
+ - WA (Wrong Answer) : Sai kết quả (Sai đáp số, sai định dạng, hoặc chưa xuất file .OUT)
+ - TLE (Time Limit Exceeded): Code chạy quá chậm (Quá 1 giây) hoặc bị treo lặp vô hạn
+ - RE (Runtime Error) : Bị lỗi (Chia 0, tràn mảng, lỗi cú pháp...)
