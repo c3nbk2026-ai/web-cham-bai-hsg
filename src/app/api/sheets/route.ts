@@ -15,13 +15,13 @@ async function askGemini(code, problem, maxScore) {
     const keyLength = GEMINI_API_KEY.length;
 
     try {
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent?key=${GEMINI_API_KEY.trim()}", {
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent?key=" + GEMINI_API_KEY.trim(), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: "Đóng vai giáo viên. Học sinh giải bài: \. Code:\n\\n\nCode lỗi cú pháp/chạy sai (auto 0 điểm). Hãy đọc ý tưởng, nếu có tư duy đúng, cho điểm vớt (0 đến \). Viết lời phê bằng Tiếng Việt CỰC KỲ NGẮN GỌN (Tối đa 1 câu). KẾT QUẢ CUỐI CÙNG BẮT BUỘC CHỈ LÀ MỘT CON SỐ DUY NHẤT."
+                        text: "Đóng vai giáo viên. Học sinh giải bài: " + problem + ". Code:\n" + code + "\n\nCode lỗi cú pháp/chạy sai (auto 0 điểm). Hãy đọc ý tưởng, nếu có tư duy đúng, cho điểm vớt (0 đến " + maxScore + "). Viết lời phê bằng Tiếng Việt CỰC KỲ NGẮN GỌN (Tối đa 1 câu). KẾT QUẢ CUỐI CÙNG BẮT BUỘC CHỈ LÀ MỘT CON SỐ DUY NHẤT."
                     }]
                 }]
             })
@@ -29,7 +29,7 @@ async function askGemini(code, problem, maxScore) {
         const data = await response.json();
         
         if (data.error) {
-            return { score: 0, reasoning: "Lỗi API (\...\, len:\): " + data.error.message };
+            return { score: 0, reasoning: "Lỗi API (" + keyPrefix + "..." + keySuffix + ", len:" + keyLength + "): " + data.error.message };
         }
 
         const parts = data.candidates?.[0]?.content?.parts || [];
