@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
@@ -8,13 +8,13 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 async function askGemini(code, problem, maxScore) {
     if (!GEMINI_API_KEY || !code.trim()) return 0;
     try {
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}", {
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: "Đóng vai giáo viên chấm thi Python. Học sinh giải bài toán: \. Mã nguồn của học sinh:\n\n\\n\nCode này bị lỗi cú pháp hoặc chạy sai kết quả (chỉ đạt 0 điểm auto). Hãy đọc ý tưởng (khai báo biến, vòng lặp, if/else). Nếu có ý tưởng đúng, hãy cho điểm vớt từ 0 đến \ (có thể lẻ 0.5). CHỈ TRẢ VỀ MỘT CON SỐ DUY NHẤT (ví dụ: 1.5), KHÔNG GIẢI THÍCH, KHÔNG CHỨA CHỮ NÀO KHÁC."
+                        text: "ÄÃ³ng vai giÃ¡o viÃªn cháº¥m thi Python. Há»c sinh giáº£i bÃ i toÃ¡n: \. MÃ£ nguá»“n cá»§a há»c sinh:\n\n\\n\nCode nÃ y bá»‹ lá»—i cÃº phÃ¡p hoáº·c cháº¡y sai káº¿t quáº£ (chá»‰ Ä‘áº¡t 0 Ä‘iá»ƒm auto). HÃ£y Ä‘á»c Ã½ tÆ°á»Ÿng (khai bÃ¡o biáº¿n, vÃ²ng láº·p, if/else). Náº¿u cÃ³ Ã½ tÆ°á»Ÿng Ä‘Ãºng, hÃ£y cho Ä‘iá»ƒm vá»›t tá»« 0 Ä‘áº¿n \ (cÃ³ thá»ƒ láº» 0.5). CHá»ˆ TRáº¢ Vá»€ Má»˜T CON Sá» DUY NHáº¤T (vÃ­ dá»¥: 1.5), KHÃ”NG GIáº¢I THÃCH, KHÃ”NG CHá»¨A CHá»® NÃ€O KHÃC."
                     }]
                 }]
             })
@@ -37,13 +37,13 @@ export async function POST(req: Request) {
         let numScore = parseFloat(score) || 0;
         let numMaxScore = parseFloat(maxScore) || 0;
 
-        // Tích hợp AI chấm vớt nếu điểm hệ thống thấp hơn tối đa
+        // TÃ­ch há»£p AI cháº¥m vá»›t náº¿u Ä‘iá»ƒm há»‡ thá»‘ng tháº¥p hÆ¡n tá»‘i Ä‘a
         if (numScore < numMaxScore && numMaxScore > 0) {
             const extractCode = code.split("--- KET QUA CHAY TAY ---")[0]; 
             const aiScore = await askGemini(extractCode, problem, numMaxScore);
             if (aiScore > numScore) {
                 numScore = aiScore;
-                errorMsg = (errorMsg ? errorMsg + " | " : "") + "AI đã vớt điểm ý tưởng: " + aiScore;
+                errorMsg = (errorMsg ? errorMsg + " | " : "") + "AI Ä‘Ã£ vá»›t Ä‘iá»ƒm Ã½ tÆ°á»Ÿng: " + aiScore;
                 score = numScore.toString();
             }
         }
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
         const sheets = google.sheets({ version: 'v4', auth });
         
         const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-        const loaiBai = category === "TL_TU_HOC" ? "Tự học" : "Đề thi";
+        const loaiBai = category === "TL_TU_HOC" ? "Tá»± há»c" : "Äá» thi";
         const soTestSai = Math.max(0, numMaxScore - numScore);
         const diem = numMaxScore > 0 ? ((numScore / numMaxScore) * 10).toFixed(1) : "0.0";
 
@@ -101,7 +101,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error("Lỗi đồng bộ Google Sheets:", error);
+        console.error("Lá»—i Ä‘á»“ng bá»™ Google Sheets:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
