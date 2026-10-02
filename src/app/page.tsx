@@ -10,7 +10,7 @@ export default function Home() {
   const [week, setWeek] = useState("");
   const [category, setCategory] = useState("TL_TU_HOC");
   const [problem, setProblem] = useState("");
-  const [code, setCode] = useState("# Viáº¿t code táº¡i Ä‘Ã¢y\n");
+  const [code, setCode] = useState("# Viết code tại đây\n");
   const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pyodide, setPyodide] = useState<any>(null);
@@ -31,13 +31,18 @@ export default function Home() {
         }
       });
 
+    fetch("/api/docs")
+      .then(res => res.json())
+      .then(data => setDocsTree(data))
+      .catch(() => console.log("Không thể tải tài liệu lý thuyết"));
+
     fetch("/data/students.json")
       .then(res => res.json())
       .then(data => {
           setStudents(data);
           if (data.length > 0) setStudentName(data[0]);
       })
-      .catch(() => console.log("KhÃ´ng tÃ¬m tháº¥y file danh sÃ¡ch há»c sinh"));
+      .catch(() => console.log("Không tìm thấy file danh sách học sinh"));
   }, []);
 
   useEffect(() => {
@@ -63,13 +68,13 @@ export default function Home() {
   };
 
   const submitCode = async () => {
-    if (!problem) return alert("Vui lÃ²ng chá»n bÃ i!");
+    if (!problem) return alert("Vui lòng chọn bài!");
     setIsLoading(true);
     setResults([]);
 
     try {
       const py = await initPyodide();
-      if (!py) throw new Error("ChÆ°a táº£i Ä‘Æ°á»£c trÃ¬nh biÃªn dá»‹ch Python.");
+      if (!py) throw new Error("Chưa tải được trình biên dịch Python.");
 
       const testCases = [];
       const maxTests = category === "TL_TU_HOC" ? 10 : 20;
@@ -92,7 +97,7 @@ export default function Home() {
       }
 
       if (testCases.length === 0) {
-        throw new Error("KhÃ´ng tÃ¬m tháº¥y dá»¯ liá»‡u Test Case cho bÃ i nÃ y.");
+        throw new Error("Không tìm thấy dữ liệu Test Case cho bài này.");
       }
 
       let passedCount = 0;
@@ -129,24 +134,24 @@ sys.stdout = io.StringIO()
             const normalize = (s: string) => (s || "").replace(/\r/g, "").split("\n").map(l => l.trimEnd()).join("\n").trim();
             
             if (normalize(actualOut) === normalize(t.out)) {
-                testResults.push({ name: t.name, status: "ÄÃšNG", css: "bg-emerald-50 border-emerald-200 text-emerald-700" });
+                testResults.push({ name: t.name, status: "ĐÚNG", css: "bg-emerald-50 border-emerald-200 text-emerald-700" });
                 passedCount++;
             } else {
                 testResults.push({ name: t.name, status: "SAI", css: "bg-rose-50 border-rose-200 text-rose-700", expected: t.out, actual: actualOut });
             }
         } catch (e: any) {
-            testResults.push({ name: t.name, status: "Lá»–I CHáº Y CODE", css: "bg-amber-50 border-amber-200 text-amber-700", err: e.message });
+            testResults.push({ name: t.name, status: "LỖI CHẠY CODE", css: "bg-amber-50 border-amber-200 text-amber-700", err: e.message });
         }
       }
 
       setResults(testResults);
 
-      // Luu lich su
-        const history = JSON.parse(localStorage.getItem('submissionHistory') || '[]');
-        history.unshift({ date: new Date().toLocaleString('vi-VN'), week, problem, score, maxScore: testCases.length, code });
-        localStorage.setItem('submissionHistory', JSON.stringify(history.slice(0, 30)));
+      // Lưu lịch sử
+      const history = JSON.parse(localStorage.getItem('submissionHistory') || '[]');
+      history.unshift({ date: new Date().toLocaleString('vi-VN'), week, problem, score: passedCount, maxScore: testCases.length, code });
+      localStorage.setItem('submissionHistory', JSON.stringify(history.slice(0, 30)));
 
-        const firstError = testResults.find(r => r.err)?.err || (passedCount < testCases.length ? "Sai Logic / KhÃ´ng khá»›p Output" : "HoÃ n háº£o");
+      const firstError = testResults.find(r => r.err)?.err || (passedCount < testCases.length ? "Sai Logic / Không khớp Output" : "Hoàn hảo");
 
       await fetch('/api/sheets', {
           method: 'POST',
@@ -165,7 +170,7 @@ sys.stdout = io.StringIO()
       });
 
     } catch (e: any) {
-      alert("Lá»—i: " + e.message);
+      alert("Lỗi: " + e.message);
     } finally {
       setIsLoading(false);
     }
@@ -173,28 +178,28 @@ sys.stdout = io.StringIO()
 
   const exportResults = () => {
       let content = `=======================================\n`;
-      content += `PHIáº¾U CHáº¤M BÃ€I - Há»† THá»NG THI HSG\n`;
+      content += `PHIẾU CHẤM BÀI - HỆ THỐNG THI HSG\n`;
       content += `=======================================\n`;
-      content += `Há»c sinh: ${studentName}\n`;
-      content += `Tuáº§n: ${week} | Loáº¡i: ${category === "TL_TU_HOC" ? "Tá»± Há»c" : "Äá» Thi"}\n`;
-      content += `BÃ i thi: ${problem}\n`;
-      content += `Thá»i gian ná»™p: ${new Date().toLocaleString('vi-VN')}\n`;
+      content += `Học sinh: ${studentName}\n`;
+      content += `Tuần: ${week} | Loại: ${category === "TL_TU_HOC" ? "Tự Học" : "Đề Thi"}\n`;
+      content += `Bài thi: ${problem}\n`;
+      content += `Thời gian nộp: ${new Date().toLocaleString('vi-VN')}\n`;
       content += `---------------------------------------\n`;
-      content += `Tá»•ng Ä‘iá»ƒm: ${results.filter(r => r.status.includes('ÄÃšNG')).length} / ${results.length}\n`;
+      content += `Tổng điểm: ${results.filter(r => r.status.includes('ĐÚNG')).length} / ${results.length}\n`;
       content += `---------------------------------------\n`;
-      content += `CHI TIáº¾T TEST CASES:\n`;
+      content += `CHI TIẾT TEST CASES:\n`;
       results.forEach(res => {
           content += `[${res.name}] - ${res.status}\n`;
           if (res.expected) {
-              content += `   + Máº«u:    ${res.expected.replace(/\n/g, ' ')}\n`;
-              content += `   + Lá»—i do: ${res.actual.replace(/\n/g, ' ')}\n`;
+              content += `   + Mẫu:    ${res.expected.replace(/\n/g, ' ')}\n`;
+              content += `   + Lỗi do: ${res.actual.replace(/\n/g, ' ')}\n`;
           }
           if (res.err) {
-              content += `   + Lá»—i:    ${res.err}\n`;
+              content += `   + Lỗi:    ${res.err}\n`;
           }
       });
       content += `=======================================\n`;
-      content += `MÃƒ NGUá»’N (SOURCE CODE):\n`;
+      content += `MÃ NGUỒN (SOURCE CODE):\n`;
       content += `${code}\n`;
 
       const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
@@ -213,7 +218,7 @@ sys.stdout = io.StringIO()
       
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
         
-        {/* Panel trÃ¡i: CÃ i Ä‘áº·t */}
+        {/* Panel trái: Cài đặt */}
         <div className="w-full lg:w-1/3 flex flex-col gap-6">
           <div className="bg-white/90 backdrop-blur-xl p-8 rounded-3xl border border-slate-200 shadow-2xl shadow-indigo-100/50">
             <div className="flex items-center gap-4 mb-8">
@@ -222,25 +227,25 @@ sys.stdout = io.StringIO()
               </div>
               <div>
                 <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-600">ProCoder VIP</h1>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Ná»n táº£ng thi Ä‘ua HSG</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Nền tảng thi đua HSG</p>
               </div>
             </div>
             
             <div className="space-y-5">
               <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">TÃªn Há»c Sinh</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tên Học Sinh</label>
                   {students.length > 0 ? (
                     <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)}>
                       {students.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   ) : (
-                    <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-semibold transition-all shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Nháº­p tÃªn..." />
+                    <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-semibold transition-all shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Nhập tên..." />
                   )}
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tuáº§n</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tuần</label>
                   <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-slate-700 font-semibold cursor-pointer shadow-sm" value={week} onChange={(e) => setWeek(e.target.value)}>
                     {Object.keys(structure).map((w) => (
                       <option key={w} value={w}>{w}</option>
@@ -248,16 +253,16 @@ sys.stdout = io.StringIO()
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Loáº¡i BÃ i</label>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Loại Bài</label>
                   <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-slate-700 font-semibold cursor-pointer shadow-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
-                    <option value="TL_TU_HOC">Tá»± há»c</option>
-                    <option value="DE_THI">Äá» thi</option>
+                    <option value="TL_TU_HOC">Tự học</option>
+                    <option value="DE_THI">Đề thi</option>
                   </select>
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chá»n BÃ i Thi</label>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chọn Bài Thi</label>
                 <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-700 font-mono font-bold cursor-pointer shadow-sm" value={problem} onChange={(e) => setProblem(e.target.value)}>
                   {structure[week]?.[category]?.map((p: string) => (
                     <option key={p} value={p}>{p}</option>
@@ -270,18 +275,18 @@ sys.stdout = io.StringIO()
               <div className="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
               <h3 className="text-sm font-bold text-indigo-800 mb-2 flex items-center gap-2">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                TrÃ¬nh cháº¥m Serverless
+                Trình chấm Serverless
               </h3>
-              <p className="text-xs text-indigo-700/80 leading-relaxed font-medium">MÃ£ nguá»“n Ä‘Æ°á»£c biÃªn dá»‹ch vÃ  cháº¡y an toÃ n qua mÃ´i trÆ°á»ng WebAssembly (Pyodide). Äiá»ƒm sá»‘ Ä‘Æ°á»£c tá»± Ä‘á»™ng Ä‘á»“ng bá»™ lÃªn há»‡ thá»‘ng Google Sheets cá»§a giÃ¡o viÃªn.</p>
+              <p className="text-xs text-indigo-700/80 leading-relaxed font-medium">Mã nguồn được biên dịch và chạy an toàn qua môi trường WebAssembly (Pyodide). Điểm số được tự động đồng bộ lên hệ thống Google Sheets của giáo viên.</p>
             </div>
           </div>
         </div>
 
-        {/* Panel pháº£i: Editor & Káº¿t quáº£ */}
+        {/* Panel phải: Editor & Kết quả */}
         <div className="w-full lg:w-2/3 flex flex-col gap-6">
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-indigo-100/40 flex flex-col overflow-hidden">
             
-            {/* Thanh cÃ´ng cá»¥ / Top Bar */}
+            {/* Thanh công cụ / Top Bar */}
             <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
               <div className="flex gap-2">
                 <div className="w-3 h-3 rounded-full bg-rose-400"></div>
@@ -297,7 +302,7 @@ sys.stdout = io.StringIO()
                 {results.length > 0 && (
                   <button onClick={exportResults} className="flex items-center gap-2 bg-white hover:bg-slate-50 text-indigo-600 px-4 py-2 rounded-xl text-sm font-bold transition-all border border-slate-200 shadow-sm hover:shadow">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                    Xuáº¥t Phiáº¿u Äiá»ƒm
+                    Xuất Phiếu Điểm
                   </button>
                 )}
                 <button 
@@ -307,19 +312,19 @@ sys.stdout = io.StringIO()
                   {isLoading ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                      Äang cháº¥m...
+                      Đang chấm...
                     </>
                   ) : (
                     <>
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                      Cháº¡y Code
+                      Chạy Code
                     </>
                   )}
                 </button>
               </div>
             </div>
 
-            {/* Code Editor (Giá»¯ giao diá»‡n tá»‘i má» cho giá»‘ng VS Code) */}
+            {/* Code Editor (Giữ giao diện tối mờ cho giống VS Code) */}
             <textarea 
               className="w-full h-80 p-6 bg-slate-900 text-cyan-300 font-mono text-[15px] focus:outline-none resize-none leading-relaxed" 
               spellCheck="false"
@@ -328,17 +333,17 @@ sys.stdout = io.StringIO()
             />
           </div>
 
-          {/* Báº£ng káº¿t quáº£ chia 2 cá»™t */}
+          {/* Bảng kết quả chia 2 cột */}
           <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl shadow-indigo-100/40 p-6 flex flex-col max-h-[28rem]">
             <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-4 flex items-center gap-2 shrink-0">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-              BÃ¡o CÃ¡o Test Cases {results.length > 0 && <span className="ml-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs">(Äáº¡t {results.filter(r => r.status === "ÄÃšNG").length}/{results.length})</span>}
+              Báo Cáo Test Cases {results.length > 0 && <span className="ml-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs">(Đạt {results.filter(r => r.status === "ĐÚNG").length}/{results.length})</span>}
             </h3>
             
             {results.length === 0 && !isLoading && (
               <div className="flex flex-col items-center justify-center h-full flex-1 text-slate-400">
                 <svg className="w-12 h-12 mb-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                <p className="text-sm font-medium">Káº¿t quáº£ cháº¡y code sáº½ hiá»ƒn thá»‹ táº¡i Ä‘Ã¢y...</p>
+                <p className="text-sm font-medium">Kết quả chạy code sẽ hiển thị tại đây...</p>
               </div>
             )}
             
@@ -346,7 +351,7 @@ sys.stdout = io.StringIO()
                 {results.map((res, i) => (
                     <div key={i} className={"p-4 rounded-2xl border " + res.css + " transition-all hover:scale-[1.02] flex flex-col shadow-sm"}>
                         <div className="font-bold flex items-center gap-2 text-sm">
-                            {res.status === "ÄÃšNG" ? (
+                            {res.status === "ĐÚNG" ? (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             ) : (
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -356,7 +361,7 @@ sys.stdout = io.StringIO()
                         {res.expected && (
                             <div className="mt-3 text-xs bg-white/60 p-3 rounded-xl border border-black/5 space-y-2 flex-1 shadow-inner">
                                 <div className="flex gap-2">
-                                  <span className="opacity-60 font-semibold w-16 shrink-0">Máº«u:</span>
+                                  <span className="opacity-60 font-semibold w-16 shrink-0">Mẫu:</span>
                                   <span className="whitespace-pre-wrap font-mono font-bold flex-1 text-emerald-700">{res.expected}</span>
                                 </div>
                                 <div className="flex gap-2">
@@ -381,8 +386,14 @@ sys.stdout = io.StringIO()
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       `}} />
     {showTheoryModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+          onClick={() => setShowTheoryModal(false)}
+        >
+          <div 
+            className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
               <h3 className="font-bold text-lg text-slate-800">Lý thuyết đang học</h3>
               <button onClick={() => setShowTheoryModal(false)} className="text-slate-400 hover:text-rose-500">
@@ -396,10 +407,3 @@ sys.stdout = io.StringIO()
 </main>
   );
 }
-
-
-
-
-
-
-

@@ -96,7 +96,7 @@ export default function TuHocPage() {
                                             {cleanName}
                                         </h3>
                                         <p className="text-white/80 text-xs line-clamp-3 leading-relaxed">
-                                            Bao gồm lý thuyết, ví dụ minh họa và bài tập vận dụng cho nội dung {cleanName}.
+                                            Tài liệu hướng dẫn chi tiết kèm bài tập thực hành dành cho buổi học này.
                                         </p>
                                     </div>
                                     

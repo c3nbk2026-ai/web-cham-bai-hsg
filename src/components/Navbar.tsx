@@ -35,13 +35,13 @@ export default function Navbar() {
                         onClick={() => setMode('DAI_TRA')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mode === 'DAI_TRA' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        Đại Trà
+                        Cơ Bản
                     </button>
                     <button 
                         onClick={() => setMode('DOI_TUYEN')}
                         className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mode === 'DOI_TUYEN' ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
-                        Đội Tuyển 🏆
+                        Nâng Cao 🚀
                     </button>
                 </div>
 
@@ -67,8 +67,14 @@ export default function Navbar() {
 
           {/* History Modal */}
           {showHistory && (
-              <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
-                  <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden">
+              <div 
+                  className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+                  onClick={() => setShowHistory(false)}
+              >
+                  <div 
+                      className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[80vh] flex flex-col overflow-hidden"
+                      onClick={(e) => e.stopPropagation()}
+                  >
                       <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                           <h3 className="font-bold text-lg text-slate-800">Lịch sử chấm bài (Gần đây)</h3>
                           <button onClick={() => setShowHistory(false)} className="text-slate-400 hover:text-rose-500">
