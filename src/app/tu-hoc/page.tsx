@@ -1,7 +1,9 @@
-"use client";
+﻿"use client";
 import { useState, useEffect } from "react";
+import { useMode } from "@/components/ModeContext";
 
 export default function TuHocPage() {
+    const { mode } = useMode();
     const [docsTree, setDocsTree] = useState<any>({});
     const [selectedDoc, setSelectedDoc] = useState<{name: string, url: string} | null>(null);
     const [isLoading, setIsLoading] = useState(true);
@@ -21,9 +23,14 @@ export default function TuHocPage() {
             .catch(() => setIsLoading(false));
     }, []);
 
-    if (isLoading) return <div className="p-10 text-center font-bold text-slate-500">Đang tải tài liệu...</div>;
+    if (isLoading) return <div className="p-10 text-center font-bold text-slate-500">Äang táº£i tÃ i liá»‡u...</div>;
 
-    // Khi chưa chọn tài liệu (Hiển thị Thư viện Thẻ)
+    // Khi chÆ°a chá»n tÃ i liá»‡u (Hiá»ƒn thá»‹ ThÆ° viá»‡n Tháº»)
+    const filteredDocsTree: any = {};
+    Object.keys(filteredDocsTree).forEach(week => {
+        filteredfilteredDocsTree[week] = filteredDocsTree[week].filter((doc: any) => !doc.mode || doc.mode === 'ALL' || doc.mode === mode);
+    });
+
     if (!selectedDoc) {
         const gradients = [
             "from-violet-500 to-purple-600 shadow-purple-500/30",
@@ -38,26 +45,26 @@ export default function TuHocPage() {
             <div className="w-full max-w-[1600px] mx-auto p-4 md:p-8 min-h-[calc(100vh-64px)] relative z-10">
                 <div className="mb-10 text-center space-y-3">
                     <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600">
-                        Thư Viện Bài Giảng
+                        ThÆ° Viá»‡n BÃ i Giáº£ng
                     </h1>
-                    <p className="text-slate-600 font-medium text-lg">Chọn một bài học dưới đây để bắt đầu hành trình chinh phục Tin học</p>
+                    <p className="text-slate-600 font-medium text-lg">Chá»n má»™t bÃ i há»c dÆ°á»›i Ä‘Ã¢y Ä‘á»ƒ báº¯t Ä‘áº§u hÃ nh trÃ¬nh chinh phá»¥c Tin há»c</p>
                 </div>
 
                 <div className="space-y-12">
-                    {Object.keys(docsTree).sort().map((week, weekIdx) => (
+                    {Object.keys(filteredDocsTree).sort().map((week, weekIdx) => (
                         <div key={week} className="space-y-6">
                             <div className="flex items-center gap-4">
                                 <h2 className="text-2xl font-black text-slate-800 uppercase tracking-widest">{week}</h2>
                                 <div className="h-1 bg-gradient-to-r from-slate-200 to-transparent flex-1 rounded-full"></div>
                             </div>
                             
-                            {docsTree[week].length === 0 ? (
+                            {filteredDocsTree[week].length === 0 ? (
                                 <div className="p-8 text-center border-2 border-dashed border-slate-300 bg-white/50 backdrop-blur-sm rounded-3xl">
-                                    <p className="text-slate-500 font-bold">Tuần này chưa có tài liệu, bạn quay lại sau nhé!</p>
+                                    <p className="text-slate-500 font-bold">Tuáº§n nÃ y chÆ°a cÃ³ tÃ i liá»‡u, báº¡n quay láº¡i sau nhÃ©!</p>
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {docsTree[week].map((doc: any, docIdx: number) => {
+                                    {filteredDocsTree[week].map((doc: any, docIdx: number) => {
                                         const gradient = gradients[(weekIdx * 10 + docIdx) % gradients.length];
                                         return (
                                             <button
@@ -65,7 +72,7 @@ export default function TuHocPage() {
                                                 onClick={() => setSelectedDoc(doc)}
                                                 className={`group relative bg-gradient-to-br ${gradient} rounded-3xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-left flex flex-col h-56 overflow-hidden border border-white/20`}
                                             >
-                                                {/* Trang trí nền góc phải */}
+                                                {/* Trang trÃ­ ná»n gÃ³c pháº£i */}
                                                 <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/20 rounded-full group-hover:scale-[2] transition-transform duration-700 blur-2xl pointer-events-none"></div>
                                                 
                                                 <div className="relative z-10 flex-1">
@@ -78,7 +85,7 @@ export default function TuHocPage() {
                                                 </div>
                                                 
                                                 <div className="relative z-10 flex items-center gap-2 text-sm font-black text-white/80 group-hover:text-white mt-4 transition-colors">
-                                                    <span>Bấm để học ngay</span>
+                                                    <span>Báº¥m Ä‘á»ƒ há»c ngay</span>
                                                     <svg className="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3"></path></svg>
                                                 </div>
                                             </button>
@@ -93,12 +100,12 @@ export default function TuHocPage() {
         );
     }
 
-    // Khi đã chọn tài liệu (Hiển thị PDF Full màn hình)
+    // Khi Ä‘Ã£ chá»n tÃ i liá»‡u (Hiá»ƒn thá»‹ PDF Full mÃ n hÃ¬nh)
     return (
         <div className="w-full max-w-[1800px] mx-auto p-4 md:p-6 h-[calc(100vh-64px)] flex flex-col">
             <div className="flex-1 bg-white rounded-3xl shadow-2xl shadow-indigo-100/50 border border-slate-200 overflow-hidden flex flex-col">
                 
-                {/* Thanh Header của Trình đọc PDF */}
+                {/* Thanh Header cá»§a TrÃ¬nh Ä‘á»c PDF */}
                 <div className="bg-slate-50/90 backdrop-blur-md px-4 sm:px-6 py-3 border-b border-slate-200 flex justify-between items-center shrink-0">
                     <div className="flex items-center gap-4 truncate">
                         <button 
@@ -106,7 +113,7 @@ export default function TuHocPage() {
                             className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-white hover:text-indigo-600 hover:shadow-sm border border-transparent hover:border-slate-200 transition-all shrink-0"
                         >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                            Quay lại
+                            Quay láº¡i
                         </button>
                         <div className="h-6 w-px bg-slate-300 hidden sm:block"></div>
                         <h3 className="font-bold text-slate-800 text-sm truncate">
@@ -116,7 +123,7 @@ export default function TuHocPage() {
 
                     <a href={selectedDoc.url} target="_blank" rel="noreferrer" className="text-xs font-bold text-indigo-600 bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200 hover:border-indigo-200 hover:bg-indigo-50 transition-all flex items-center gap-2 shrink-0 ml-4">
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                        Mở tab mới
+                        Má»Ÿ tab má»›i
                     </a>
                 </div>
 
@@ -130,3 +137,5 @@ export default function TuHocPage() {
         </div>
     );
 }
+
+

@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
@@ -7,7 +7,7 @@ const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID || "YOUR_SPREADSHEET_ID_HERE
 export async function POST(req: Request) {
     try {
         const body = await req.json();
-        const { studentName, week, category, problem, score, maxScore, errorMsg, code } = body;
+        const { studentName, mode, week, category, problem, score, maxScore, errorMsg, code } = body;
 
         if (SPREADSHEET_ID === "YOUR_SPREADSHEET_ID_HERE") {
             console.log("Demo mode: Data that WOULD be sent to Google Sheets:");
@@ -31,13 +31,13 @@ export async function POST(req: Request) {
         const sheets = google.sheets({ version: 'v4', auth });
         
         const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
-        const loaiBai = category === "TL_TU_HOC" ? "Tự học" : "Đề thi";
+        const loaiBai = category === "TL_TU_HOC" ? "Tá»± há»c" : "Äá» thi";
         const soTestSai = maxScore - score;
         const diem = maxScore > 0 ? ((score / maxScore) * 10).toFixed(1) : "0.0";
 
         await sheets.spreadsheets.values.append({
             spreadsheetId: SPREADSHEET_ID,
-            range: 'BangDiem!A:K',
+            range: mode === 'DOI_TUYEN' ? 'BangDiem_DoiTuyen!A:K' : 'BangDiem_DaiTra!A:K',
             valueInputOption: 'USER_ENTERED',
             requestBody: {
                 values: [[
@@ -58,7 +58,8 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error("Lỗi đồng bộ Google Sheets:", error);
+        console.error("Lá»—i Ä‘á»“ng bá»™ Google Sheets:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+

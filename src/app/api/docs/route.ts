@@ -13,10 +13,9 @@ export async function GET() {
         for (const week of weeks) {
             docsTree[week] = [];
             
-            // Check both possible folder names
             const possibleDirs = ['TL_TU_HOC', 'TAI_LIEU'];
-            let foundDir = '';
             let actualPath = '';
+            let foundDir = '';
             
             for (const pDir of possibleDirs) {
                 const testPath = path.join(dataDir, week, pDir);
@@ -28,15 +27,26 @@ export async function GET() {
             }
             
             if (actualPath) {
-                // Find all files that are PDFs
-                const files = fs.readdirSync(actualPath)
-                    .filter(f => f.endsWith('.pdf'));
-                
+                // Đọc các file chung (không chia nhóm)
+                const files = fs.readdirSync(actualPath).filter(f => f.endsWith('.pdf'));
                 for (const file of files) {
-                    docsTree[week].push({
-                        name: file,
-                        url: `/data/${week}/${foundDir}/${file}`
-                    });
+                    docsTree[week].push({ name: file, url: `/data/${week}/${foundDir}/${file}`, mode: 'ALL' });
+                }
+
+                // Đọc file Đại Trà
+                if (fs.existsSync(path.join(actualPath, 'DAI_TRA'))) {
+                    const dtFiles = fs.readdirSync(path.join(actualPath, 'DAI_TRA')).filter(f => f.endsWith('.pdf'));
+                    for (const file of dtFiles) {
+                        docsTree[week].push({ name: file, url: `/data/${week}/${foundDir}/DAI_TRA/${file}`, mode: 'DAI_TRA' });
+                    }
+                }
+
+                // Đọc file Đội Tuyển
+                if (fs.existsSync(path.join(actualPath, 'DOI_TUYEN'))) {
+                    const dtFiles = fs.readdirSync(path.join(actualPath, 'DOI_TUYEN')).filter(f => f.endsWith('.pdf'));
+                    for (const file of dtFiles) {
+                        docsTree[week].push({ name: file, url: `/data/${week}/${foundDir}/DOI_TUYEN/${file}`, mode: 'DOI_TUYEN' });
+                    }
                 }
             }
         }
