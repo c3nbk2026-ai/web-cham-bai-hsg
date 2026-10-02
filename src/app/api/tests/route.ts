@@ -13,15 +13,32 @@ export async function GET() {
         for (const week of weeks) {
             tree[week] = { "TL_TU_HOC": [], "DE_THI": [] };
             
-            const tuHocDir = path.join(dataDir, week, 'TL_TU_HOC', 'BO_TEST');
-            if (fs.existsSync(tuHocDir)) {
-                tree[week]["TL_TU_HOC"] = fs.readdirSync(tuHocDir);
-            }
+            // Hàm trợ giúp kiểm tra thư mục tồn tại và trả về danh sách thư mục con
+            const getDirs = (paths: string[]) => {
+                for (const p of paths) {
+                    const fullPath = path.join(dataDir, week, ...p.split('/'));
+                    if (fs.existsSync(fullPath)) {
+                        return fs.readdirSync(fullPath);
+                    }
+                }
+                return [];
+            };
+
+            // Lấy danh sách bài Tự Học
+            const tuHocDirs = getDirs([
+                'TL_TU_HOC/BO_TEST',
+                'TAI_LIEU/BO_TEST',
+                'BO_TEST' // Fallback nếu nằm ngay ngoài
+            ]);
+            tree[week]["TL_TU_HOC"] = tuHocDirs;
             
-            const deThiDir = path.join(dataDir, week, 'DE_THI', 'TestCases');
-            if (fs.existsSync(deThiDir)) {
-                tree[week]["DE_THI"] = fs.readdirSync(deThiDir);
-            }
+            // Lấy danh sách bài Đề Thi
+            const deThiDirs = getDirs([
+                'DE_THI/TestCases',
+                'DE_THI/BO_TEST'
+            ]);
+            // Nếu Đề Thi trống mà bên ngoài có BO_TEST, gán tạm để code hoạt động
+            tree[week]["DE_THI"] = deThiDirs.length > 0 ? deThiDirs : tuHocDirs;
         }
         return NextResponse.json(tree);
     } catch (error: any) {

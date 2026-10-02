@@ -13,16 +13,29 @@ export async function GET() {
         for (const week of weeks) {
             docsTree[week] = [];
             
-            const tuHocDir = path.join(dataDir, week, 'TL_TU_HOC');
-            if (fs.existsSync(tuHocDir)) {
-                // Find all files that are PDFs (can add more later)
-                const files = fs.readdirSync(tuHocDir)
+            // Check both possible folder names
+            const possibleDirs = ['TL_TU_HOC', 'TAI_LIEU'];
+            let foundDir = '';
+            let actualPath = '';
+            
+            for (const pDir of possibleDirs) {
+                const testPath = path.join(dataDir, week, pDir);
+                if (fs.existsSync(testPath)) {
+                    actualPath = testPath;
+                    foundDir = pDir;
+                    break;
+                }
+            }
+            
+            if (actualPath) {
+                // Find all files that are PDFs
+                const files = fs.readdirSync(actualPath)
                     .filter(f => f.endsWith('.pdf'));
                 
                 for (const file of files) {
                     docsTree[week].push({
                         name: file,
-                        url: `/data/${week}/TL_TU_HOC/${file}`
+                        url: `/data/${week}/${foundDir}/${file}`
                     });
                 }
             }
