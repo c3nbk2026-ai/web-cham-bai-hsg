@@ -1,23 +1,17 @@
-import type { Metadata } from "next";
-import localFont from "next/font/local";
+﻿import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ModeProvider } from "@/components/ModeContext";
 
-const geistSans = localFont({
-  src: "./fonts/GeistVF.woff",
-  variable: "--font-geist-sans",
-  weight: "100 900",
-});
-const geistMono = localFont({
-  src: "./fonts/GeistMonoVF.woff",
-  variable: "--font-geist-mono",
-  weight: "100 900",
+const inter = Inter({
+  subsets: ["latin", "vietnamese"],
+  variable: "--font-inter",
 });
 
 export const metadata: Metadata = {
-  title: "ProCoder VIP - Nền Tảng Thi Đua HSG",
-  description: "Nền tảng thi đua HSG môn Tin học",
+  title: "ProCoder VIP - Ná»n Táº£ng Thi Äua HSG",
+  description: "Ná»n táº£ng thi Ä‘ua HSG mÃ´n Tin há»c",
 };
 
 export default function RootLayout({
@@ -27,7 +21,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="vi">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased bg-slate-50 min-h-screen flex flex-col selection:bg-indigo-500/20 relative overflow-x-hidden`}>
+      <body className={` antialiased bg-slate-50 min-h-screen flex flex-col selection:bg-indigo-500/20 relative overflow-x-hidden`}>
         
         {/* Colorful Background Blobs */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -48,3 +42,4 @@ export default function RootLayout({
     </html>
   );
 }
+
