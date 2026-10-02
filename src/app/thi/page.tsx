@@ -7,10 +7,16 @@ export default function ExamRoom() {
   const [structure, setStructure] = useState<any>({});
   const [className, setClassName] = useState("10A1");
   const [testFolder, setTestFolder] = useState("");
-  const [problem, setProblem] = useState("");
+  const [problem, setProblem] = useState(""); // Lưu tên bài (VD: BAI1)
   const [code, setCode] = useState("# Viết code tại đây\n");
-  const [results, setResults] = useState<any[]>([]);
+  
+  // Terminal I/O states
+  const [stdin, setStdin] = useState("");
+  const [stdout, setStdout] = useState("");
+  const [isOutputError, setIsOutputError] = useState(false);
+  
   const [isLoading, setIsLoading] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [pyodide, setPyodide] = useState<any>(null);
   
   const [studentName, setStudentName] = useState("");
@@ -95,13 +101,13 @@ export default function ExamRoom() {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isExamStarted, isFinished, problem, code]);
+  }, [isExamStarted, isFinished, problem, code, stdout]);
 
   const drawExam = () => {
       const examFolder = "NGAN_HANG_DE";
       const problems = structure[examFolder]?.["DE_THI"] || [];
       
-      if (problems.length === 0) return alert("Hệ thống chưa tìm thấy bài thi nào! Vui lòng kiểm tra lại thư mục public/data/NGAN_HANG_DE/DE_THI/TestCases");
+      if (problems.length === 0) return alert("Hệ thống chưa tìm thấy bài thi nào! Vui lòng copy các file PDF đề thi vào public/data/NGAN_HANG_DE/DE_THI/");
       
       const randomProblem = problems[Math.floor(Math.random() * problems.length)];
       setProblem(randomProblem);
@@ -134,94 +140,49 @@ export default function ExamRoom() {
     return py;
   };
 
-  const getTestUrl = (testName: string, ext: string) => {
-    const problemName = problem.replace("TEST_", "");
-    return `/data/${testFolder}/DE_THI/TestCases/${problem}/${testName}/${problemName}.${ext}`;
-  };
+  // CHẠY CODE VỚI INPUT/OUTPUT TỰ DO
+  const runCode = async () => {
+      if (!code.trim()) return;
+      setIsLoading(true);
+      setIsOutputError(false);
+      setStdout("Đang chạy code...");
+      
+      try {
+          const py = await initPyodide();
+          if (!py) throw new Error("Chưa tải được trình biên dịch Python.");
 
-  const submitCode = async (isAutoSubmit = false) => {
-    if (!problem) return;
-    setIsLoading(true);
-    setResults([]);
-
-    try {
-      const py = await initPyodide();
-      if (!py) throw new Error("Chưa tải được trình biên dịch Python.");
-
-      const testCases = [];
-      const maxTests = 20; // Đề thi kiểm tra tối đa 20 test
-      for (let i = 1; i <= maxTests; i++) {
-        const testCaseFolder = `Test${i.toString().padStart(2, "0")}`;
-        try {
-          const inpRes = await fetch(getTestUrl(testCaseFolder, "INP"));
-          const outRes = await fetch(getTestUrl(testCaseFolder, "OUT"));
-          
-          if (!inpRes.ok || !outRes.ok) break;
-          
-          testCases.push({
-            name: testCaseFolder,
-            inp: await inpRes.text(),
-            out: (await outRes.text()).trim(),
-          });
-        } catch(e) {
-          break;
-        }
-      }
-
-      if (testCases.length === 0) {
-        throw new Error("Không tìm thấy dữ liệu Test Case cho bài này.");
-      }
-
-      let passedCount = 0;
-      const testResults = [];
-
-      for (const t of testCases) {
-        const pName = problem.replace("TEST_", "");
-        
-        try {
-            py.globals.set("test_input_data", t.inp);
-            await py.runPythonAsync(`
+          py.globals.set("custom_input_data", stdin);
+          await py.runPythonAsync(`
 import sys
 import io
-sys.stdin = io.StringIO(test_input_data)
+sys.stdin = io.StringIO(custom_input_data)
 sys.stdout = io.StringIO()
-            `);
-            
-            try { py.FS.writeFile(pName + ".INP", t.inp); } catch(e) {}
-            try { py.FS.writeFile(pName + ".inp", t.inp); } catch(e) {}
-            try { py.FS.writeFile(pName + ".OUT", ""); } catch(e) {}
-            try { py.FS.writeFile(pName + ".out", ""); } catch(e) {}
+          `);
 
-            await py.runPythonAsync(code);
-
-            let actualOut = "";
-            try { actualOut = py.FS.readFile(pName + ".OUT", { encoding: "utf8" }).trim(); } catch(e) {}
-            if (!actualOut) {
-                try { actualOut = py.FS.readFile(pName + ".out", { encoding: "utf8" }).trim(); } catch(e) {}
-            }
-            if (!actualOut) {
-                actualOut = await py.runPythonAsync("sys.stdout.getvalue().strip()");
-            }
-            
-            const normalize = (s: string) => (s || "").replace(/\r/g, "").split("\n").map(l => l.trimEnd()).join("\n").trim();
-            
-            if (normalize(actualOut) === normalize(t.out)) {
-                testResults.push({ name: t.name, status: "ĐÚNG", css: "bg-emerald-50 border-emerald-200 text-emerald-700" });
-                passedCount++;
-            } else {
-                // EXAM MODE: Don't show the expected output to prevent reverse engineering!
-                testResults.push({ name: t.name, status: "SAI", css: "bg-rose-50 border-rose-200 text-rose-700", expected: "---ẨN---", actual: actualOut });
-            }
-        } catch (e: any) {
-            testResults.push({ name: t.name, status: "LỖI CHẠY CODE", css: "bg-amber-50 border-amber-200 text-amber-700", err: e.message });
-        }
+          await py.runPythonAsync(code);
+          const actualOut = await py.runPythonAsync("sys.stdout.getvalue()");
+          setStdout(actualOut || "<Chương trình không in ra kết quả nào>");
+      } catch(e: any) {
+          setIsOutputError(true);
+          setStdout("LỖI CHẠY CODE:\n" + e.toString());
+      } finally {
+          setIsLoading(false);
       }
+  };
 
-      setResults(testResults);
+  // NỘP BÀI THỦ CÔNG
+  const submitCode = async (isAutoSubmit = false) => {
+    if (!problem) return;
+    
+    if (!isAutoSubmit) {
+        if (!confirm("Bạn có chắc chắn muốn nộp bài? Sau khi nộp, bạn sẽ KHÔNG THỂ sửa lại!")) return;
+    }
 
-      const firstError = testResults.find(r => r.err)?.err || (passedCount < testCases.length ? "Sai Logic / Không khớp Output" : "Hoàn hảo");
+    setIsSubmitting(true);
+    setIsFinished(true);
 
-      // Auto Retry Fetch Logic
+    try {
+      // Gửi bài lên Google Sheets
       let retries = 3;
       while(retries > 0) {
           try {
@@ -231,31 +192,29 @@ sys.stdout = io.StringIO()
                   body: JSON.stringify({
                       studentName,
                       mode: 'DE_THI',
-                      week: className, // Gửi tên LỚP vào cột TUẦN trên Google Sheet!
+                      week: className, // Gửi tên LỚP vào cột TUẦN
                       category: 'DE_THI',
                       problem,
-                      score: passedCount,
-                      maxScore: testCases.length,
-                      errorMsg: `Vi phạm: ${violationCount} lần. Lỗi: ${firstError}`,
+                      score: "Chờ chấm", // Không tự động chấm nữa
+                      maxScore: "N/A",
+                      errorMsg: `Vi phạm: ${violationCount} lần. (Output cuối: ${stdout.substring(0, 50).replace(/\n/g, " ")})`,
                       code: code
                   })
               });
-              if(res.ok) break;
+              if(res.ok) {
+                  alert("Đã nộp bài thành công!");
+                  break;
+              }
           } catch(e) {
               retries--;
-              if(retries === 0) alert("Mạng yếu! Kết quả của bạn chưa được gửi về máy chủ. Vui lòng bấm Nộp lại hoặc copy code ra file .txt nộp cho Giám thị.");
+              if(retries === 0) alert("Mạng yếu! Kết quả của bạn chưa được gửi về máy chủ. Vui lòng copy code ra file .txt nộp cho Giám thị.");
               await new Promise(r => setTimeout(r, 2000));
           }
       }
-      
-      if (isAutoSubmit) {
-          setIsFinished(true);
-      }
-
     } catch (e: any) {
-      alert("Lỗi: " + e.message);
+      alert("Lỗi khi nộp bài: " + e.message);
     } finally {
-      setIsLoading(false);
+      setIsSubmitting(false);
     }
   };
 
@@ -341,20 +300,27 @@ sys.stdout = io.StringIO()
                 )}
             </div>
 
-            <div className="flex items-center gap-6">
-                <div className={`text-3xl font-mono font-black ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400'}`}>
+            <div className="flex items-center gap-4">
+                <div className={`text-3xl font-mono font-black mr-4 ${timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400'}`}>
                     {formatTime(timeLeft)}
                 </div>
                 <button 
-                    onClick={() => submitCode(false)} 
+                    onClick={runCode}
                     disabled={isLoading || isFinished}
-                    className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-emerald-900 transition-all disabled:opacity-50">
-                  {isLoading ? 'ĐANG CHẤM...' : (isFinished ? 'ĐÃ NỘP BÀI' : 'NỘP BÀI')}
+                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-900 transition-all disabled:opacity-50">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    {isLoading ? 'ĐANG CHẠY...' : 'CHẠY CODE'}
+                </button>
+                <button 
+                    onClick={() => submitCode(false)} 
+                    disabled={isSubmitting || isFinished}
+                    className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-rose-900 transition-all disabled:opacity-50">
+                  {isSubmitting ? 'ĐANG NỘP...' : (isFinished ? 'ĐÃ NỘP BÀI' : 'NỘP BÀI')}
                 </button>
             </div>
         </div>
 
-        {/* Main Workspace: Left (PDF) and Right (Editor + Results) */}
+        {/* Main Workspace: Left (PDF) and Right (Editor + IO) */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
             
             {/* Left: Problem PDF Viewer */}
@@ -365,70 +331,65 @@ sys.stdout = io.StringIO()
                         Nội dung Đề Thi
                     </span>
                 </div>
-                {/* Quy ước: File PDF của đề thi được đặt trùng tên với bài toán (ví dụ: BAI1.pdf) và nằm trong thư mục DE_THI */}
+                {/* Lấy PDF dựa theo tên problem */}
                 <iframe 
-                    src={`/data/${testFolder}/DE_THI/${problem.replace("TEST_", "")}.pdf#toolbar=0&navpanes=0`} 
+                    src={`/data/${testFolder}/DE_THI/${problem}.pdf#toolbar=0&navpanes=0`} 
                     className="w-full flex-1 border-0 bg-white"
                     title="Nội dung đề thi"
                 />
             </div>
 
-            {/* Right: Editor & Results */}
+            {/* Right: Editor & IO */}
             <div className="flex flex-col gap-4 min-h-0">
                 {/* Editor */}
-                <div className="flex-[2] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
+                <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
                     <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 flex justify-between items-center text-xs font-bold text-slate-400">
                         <span>Trình soạn thảo Python (Pyodide)</span>
                     </div>
                     <textarea 
-                    className="w-full flex-1 p-6 bg-[#1e1e1e] text-cyan-300 font-mono text-[16px] focus:outline-none resize-none leading-relaxed" 
-                    spellCheck="false"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    disabled={isFinished}
+                        className="w-full flex-1 p-6 bg-[#1e1e1e] text-cyan-300 font-mono text-[16px] focus:outline-none resize-none leading-relaxed" 
+                        spellCheck="false"
+                        value={code}
+                        onChange={(e) => setCode(e.target.value)}
+                        disabled={isFinished}
                     />
                 </div>
 
-                {/* Results */}
-                <div className="flex-[1] bg-slate-800 rounded-2xl border border-slate-700 p-4 flex flex-col overflow-hidden shadow-xl">
-                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 shrink-0">
-                        Báo Cáo Test Cases
-                    </h3>
+                {/* IO Terminal */}
+                <div className="flex-[2] flex gap-4 min-h-0">
+                    {/* Standard Input */}
+                    <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
+                        <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 flex justify-between items-center text-xs font-bold text-slate-400">
+                            <span>Dữ liệu nhập (STDIN)</span>
+                        </div>
+                        <textarea 
+                            className="w-full flex-1 p-4 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" 
+                            spellCheck="false"
+                            placeholder="Nhập dữ liệu đầu vào cho chương trình ở đây..."
+                            value={stdin}
+                            onChange={(e) => setStdin(e.target.value)}
+                            disabled={isFinished}
+                        />
+                    </div>
                     
-                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                        {results.length === 0 ? (
-                            <div className="flex h-full items-center justify-center text-slate-500 font-medium italic">
-                                Chưa có kết quả. Bấm Nộp bài để chấm điểm.
-                            </div>
-                        ) : (
-                            results.map((res, i) => (
-                                <div key={i} className={`p-4 rounded-xl border ${res.status === 'ĐÚNG' ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-400' : 'bg-rose-900/20 border-rose-500/30 text-rose-400'} flex flex-col`}>
-                                    <div className="font-bold flex items-center gap-2 text-sm mb-2">
-                                        {res.name}: {res.status}
-                                    </div>
-                                    {res.status === 'SAI' && (
-                                        <div className="text-xs bg-black/30 p-3 rounded-lg font-mono">
-                                            <div className="opacity-70 mb-1">Output của bạn:</div>
-                                            <div className="text-rose-300">{res.actual || "<trống>"}</div>
-                                        </div>
-                                    )}
-                                    {res.err && <div className="text-xs font-mono bg-black/30 p-3 rounded-lg text-amber-400">{res.err}</div>}
-                                </div>
-                            ))
-                        )}
+                    {/* Standard Output */}
+                    <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
+                        <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 flex justify-between items-center text-xs font-bold text-slate-400">
+                            <span>Kết quả xuất (STDOUT)</span>
+                        </div>
+                        <textarea 
+                            className={`w-full flex-1 p-4 font-mono text-sm focus:outline-none resize-none ${isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400'}`} 
+                            spellCheck="false"
+                            readOnly
+                            placeholder="Kết quả chương trình sẽ hiển thị ở đây sau khi bạn bấm Chạy Code..."
+                            value={stdout}
+                        />
                     </div>
                 </div>
             </div>
         </div>
 
       </div>
-      
-      <style dangerouslySetInnerHTML={{__html: `
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #475569; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #64748b; }
-      `}} />
     </main>
   );
 }
