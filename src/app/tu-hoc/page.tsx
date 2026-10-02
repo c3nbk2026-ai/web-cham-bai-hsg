@@ -58,7 +58,7 @@ export default function TuHocPage() {
         return (
             <div className="w-full max-w-[1600px] mx-auto p-4 md:p-8 min-h-[calc(100vh-64px)] relative z-10">
                 <div className="mb-10 text-center space-y-3">
-                    <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600">
+                    <h1 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-cyan-600 leading-tight py-2">
                         Thư Viện Bài Giảng
                     </h1>
                     <p className="text-slate-600 font-medium text-lg">Chọn một bài học dưới đây để bắt đầu</p>
