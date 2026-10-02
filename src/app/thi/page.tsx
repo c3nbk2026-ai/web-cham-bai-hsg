@@ -98,19 +98,14 @@ export default function ExamRoom() {
   }, [isExamStarted, isFinished, problem, code]);
 
   const drawExam = () => {
-      // Gom tất cả các bài thi (DE_THI) từ tất cả các thư mục trong data/
-      let allProblems: {folder: string, problem: string}[] = [];
-      Object.keys(structure).forEach(folder => {
-          if(structure[folder]["DE_THI"]) {
-              structure[folder]["DE_THI"].forEach((p: string) => allProblems.push({folder, problem: p}));
-          }
-      });
-
-      if (allProblems.length === 0) return alert("Hệ thống chưa có đề thi nào trong mục DE_THI!");
+      const examFolder = "NGAN_HANG_DE";
+      const problems = structure[examFolder]?.["DE_THI"] || [];
       
-      const randomP = allProblems[Math.floor(Math.random() * allProblems.length)];
-      setProblem(randomP.problem);
-      setTestFolder(randomP.folder);
+      if (problems.length === 0) return alert("Hệ thống chưa tìm thấy bài thi nào! Vui lòng kiểm tra lại thư mục public/data/NGAN_HANG_DE/DE_THI/TestCases");
+      
+      const randomProblem = problems[Math.floor(Math.random() * problems.length)];
+      setProblem(randomProblem);
+      setTestFolder(examFolder);
       setHasDrawn(true);
   };
 
@@ -359,49 +354,69 @@ sys.stdout = io.StringIO()
             </div>
         </div>
 
-        {/* Editor & Results */}
+        {/* Main Workspace: Left (PDF) and Right (Editor + Results) */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
-            {/* Editor */}
+            
+            {/* Left: Problem PDF Viewer */}
             <div className="bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
                 <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 flex justify-between items-center text-xs font-bold text-slate-400">
-                    <span>Trình soạn thảo Python (Pyodide)</span>
+                    <span className="flex items-center gap-2">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        Nội dung Đề Thi
+                    </span>
                 </div>
-                <textarea 
-                  className="w-full flex-1 p-6 bg-[#1e1e1e] text-cyan-300 font-mono text-[16px] focus:outline-none resize-none leading-relaxed" 
-                  spellCheck="false"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  disabled={isFinished}
+                {/* Quy ước: File PDF của đề thi được đặt trùng tên với bài toán (ví dụ: BAI1.pdf) và nằm trong thư mục DE_THI */}
+                <iframe 
+                    src={`/data/${testFolder}/DE_THI/${problem.replace("TEST_", "")}.pdf#toolbar=0&navpanes=0`} 
+                    className="w-full flex-1 border-0 bg-white"
+                    title="Nội dung đề thi"
                 />
             </div>
 
-            {/* Results */}
-            <div className="bg-slate-800 rounded-2xl border border-slate-700 p-4 flex flex-col overflow-hidden shadow-xl">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 shrink-0">
-                    Báo Cáo Test Cases
-                </h3>
-                
-                <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
-                    {results.length === 0 ? (
-                        <div className="flex h-full items-center justify-center text-slate-500 font-medium italic">
-                            Chưa có kết quả. Bấm Nộp bài để chấm điểm.
-                        </div>
-                    ) : (
-                        results.map((res, i) => (
-                            <div key={i} className={`p-4 rounded-xl border ${res.status === 'ĐÚNG' ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-400' : 'bg-rose-900/20 border-rose-500/30 text-rose-400'} flex flex-col`}>
-                                <div className="font-bold flex items-center gap-2 text-sm mb-2">
-                                    {res.name}: {res.status}
-                                </div>
-                                {res.status === 'SAI' && (
-                                    <div className="text-xs bg-black/30 p-3 rounded-lg font-mono">
-                                        <div className="opacity-70 mb-1">Output của bạn:</div>
-                                        <div className="text-rose-300">{res.actual || "<trống>"}</div>
-                                    </div>
-                                )}
-                                {res.err && <div className="text-xs font-mono bg-black/30 p-3 rounded-lg text-amber-400">{res.err}</div>}
+            {/* Right: Editor & Results */}
+            <div className="flex flex-col gap-4 min-h-0">
+                {/* Editor */}
+                <div className="flex-[2] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
+                    <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 flex justify-between items-center text-xs font-bold text-slate-400">
+                        <span>Trình soạn thảo Python (Pyodide)</span>
+                    </div>
+                    <textarea 
+                    className="w-full flex-1 p-6 bg-[#1e1e1e] text-cyan-300 font-mono text-[16px] focus:outline-none resize-none leading-relaxed" 
+                    spellCheck="false"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    disabled={isFinished}
+                    />
+                </div>
+
+                {/* Results */}
+                <div className="flex-[1] bg-slate-800 rounded-2xl border border-slate-700 p-4 flex flex-col overflow-hidden shadow-xl">
+                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2 shrink-0">
+                        Báo Cáo Test Cases
+                    </h3>
+                    
+                    <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar space-y-3">
+                        {results.length === 0 ? (
+                            <div className="flex h-full items-center justify-center text-slate-500 font-medium italic">
+                                Chưa có kết quả. Bấm Nộp bài để chấm điểm.
                             </div>
-                        ))
-                    )}
+                        ) : (
+                            results.map((res, i) => (
+                                <div key={i} className={`p-4 rounded-xl border ${res.status === 'ĐÚNG' ? 'bg-emerald-900/20 border-emerald-500/30 text-emerald-400' : 'bg-rose-900/20 border-rose-500/30 text-rose-400'} flex flex-col`}>
+                                    <div className="font-bold flex items-center gap-2 text-sm mb-2">
+                                        {res.name}: {res.status}
+                                    </div>
+                                    {res.status === 'SAI' && (
+                                        <div className="text-xs bg-black/30 p-3 rounded-lg font-mono">
+                                            <div className="opacity-70 mb-1">Output của bạn:</div>
+                                            <div className="text-rose-300">{res.actual || "<trống>"}</div>
+                                        </div>
+                                    )}
+                                    {res.err && <div className="text-xs font-mono bg-black/30 p-3 rounded-lg text-amber-400">{res.err}</div>}
+                                </div>
+                            ))
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
