@@ -1,4 +1,6 @@
-"use client";
+const fs = require('fs');
+
+const content = `"use client";
 
 import { useState, useEffect } from "react";
 import Script from "next/script";
@@ -8,7 +10,7 @@ export default function ExamRoom() {
   const [className, setClassName] = useState("10A1");
   const [testFolder, setTestFolder] = useState("");
   const [problem, setProblem] = useState("");
-  const [code, setCode] = useState("# Viết code tại đây\n");
+  const [code, setCode] = useState("# Viết code tại đây\\n");
   const [stdin, setStdin] = useState("");
   const [stdout, setStdout] = useState("");
   const [isOutputError, setIsOutputError] = useState(false);
@@ -100,12 +102,12 @@ export default function ExamRoom() {
       if (!py) throw new Error("Chưa tải được Python.");
       py.globals.set("custom_input_data", stdin);
       py.globals.set("student_code", code);
-      await py.runPythonAsync("import sys, io, traceback\nsys.stdin = io.StringIO(custom_input_data)\nsys.stdout = io.StringIO()");
-      await py.runPythonAsync("try:\n    exec(student_code, {})\nexcept Exception as e:\n    print('\\n--- CHƯƠNG TRÌNH BỊ LỖI ---')\n    traceback.print_exc(file=sys.stdout)");
+      await py.runPythonAsync("import sys, io, traceback\\nsys.stdin = io.StringIO(custom_input_data)\\nsys.stdout = io.StringIO()");
+      await py.runPythonAsync("try:\\n    exec(student_code, {})\\nexcept Exception as e:\\n    print('\\\\n--- CHƯƠNG TRÌNH BỊ LỖI ---')\\n    traceback.print_exc(file=sys.stdout)");
       const out = await py.runPythonAsync("sys.stdout.getvalue()");
       if (out.includes("--- CHƯƠNG TRÌNH BỊ LỖI ---")) setIsOutputError(true);
       setStdout(out || "<Chương trình không in ra kết quả nào>");
-    } catch(e: any) { setIsOutputError(true); setStdout("LỖI HỆ THỐNG:\n" + e.toString()); }
+    } catch(e: any) { setIsOutputError(true); setStdout("LỖI HỆ THỐNG:\\n" + e.toString()); }
     finally { setIsLoading(false); }
   };
 
@@ -121,7 +123,7 @@ export default function ExamRoom() {
     if (!isAutoSubmit && !confirm("Bạn có chắc chắn muốn nộp bài? Hệ thống sẽ tự động chấm điểm và bạn KHÔNG THỂ sửa lại!")) return;
     setIsSubmitting(true); setIsFinished(true);
 
-    const baseProblem = problem.replace(/\.[^/.]+$/, "");
+    const baseProblem = problem.replace(/\\.[^/.]+$/, "");
     
     // Tìm và chấm Test Cases ẩn
     const testCases = [];
@@ -147,10 +149,10 @@ export default function ExamRoom() {
             try {
               py.globals.set("test_input_data", t.inp);
               py.globals.set("student_code", code);
-              await py.runPythonAsync("import sys, io\nsys.stdin = io.StringIO(test_input_data)\nsys.stdout = io.StringIO()");
-              await py.runPythonAsync("try:\n    exec(student_code, {})\nexcept:\n    pass");
+              await py.runPythonAsync("import sys, io\\nsys.stdin = io.StringIO(test_input_data)\\nsys.stdout = io.StringIO()");
+              await py.runPythonAsync("try:\\n    exec(student_code, {})\\nexcept:\\n    pass");
               const actual = await py.runPythonAsync("sys.stdout.getvalue()");
-              const norm = (s: string) => (s || "").replace(/\r/g, "").split("\n").map((l: string) => l.trimEnd()).join("\n").trim();
+              const norm = (s: string) => (s || "").replace(/\\r/g, "").split("\\n").map((l: string) => l.trimEnd()).join("\\n").trim();
               if (norm(actual) === norm(t.out)) passed++;
             } catch(e) {}
           }
@@ -159,17 +161,17 @@ export default function ExamRoom() {
       finalScore = passed.toString();
       finalMax = testCases.length.toString();
       finalMsg += " (Tự động chấm: " + passed + "/" + testCases.length + " Test Cases đúng)";
-      if (!isAutoSubmit) alert("Nộp bài thành công!\nĐiểm hệ thống chấm tự động: " + passed + "/" + testCases.length);
+      if (!isAutoSubmit) alert("Nộp bài thành công!\\nĐiểm hệ thống chấm tự động: " + passed + "/" + testCases.length);
     } else {
       if (!isAutoSubmit) {
-        const userInput = prompt("⚠️ Chưa có bộ Test tự động cho đề này.\nNhập TỔNG SỐ CÂU HỎI để giáo viên tự chấm (ví dụ: 5):", "5");
+        const userInput = prompt("⚠️ Chưa có bộ Test tự động cho đề này.\\nNhập TỔNG SỐ CÂU HỎI để giáo viên tự chấm (ví dụ: 5):", "5");
         finalMax = userInput || "N/A";
         alert("Đã ghi nhận bài nộp!");
       }
-      finalMsg += " (Output cuối: " + stdout.substring(0, 100).replace(/\n/g, " ") + ")";
+      finalMsg += " (Output cuối: " + stdout.substring(0, 100).replace(/\\n/g, " ") + ")";
     }
 
-    const fullSub = "--- MÃ NGUỒN ---\n" + code + "\n\n--- KẾT QUẢ CHẠY TAY ---\n" + stdout;
+    const fullSub = "--- MÃ NGUỒN ---\\n" + code + "\\n\\n--- KẾT QUẢ CHẠY TAY ---\\n" + stdout;
     try {
       for (let retries = 3; retries > 0; retries--) {
         try {
@@ -251,7 +253,7 @@ export default function ExamRoom() {
         <div className="bg-slate-800 rounded-2xl p-4 flex justify-between items-center border border-slate-700 shadow-xl shrink-0">
           <div className="flex items-center gap-4">
             <div className="px-4 py-2 bg-indigo-500/20 text-indigo-300 font-bold rounded-xl border border-indigo-500/30">{studentName} - {className}</div>
-            <div className="px-4 py-2 bg-slate-700/50 text-slate-300 font-bold font-mono rounded-xl border border-slate-600">Bài: {problem.replace(/\.[^/.]+$/, "")}</div>
+            <div className="px-4 py-2 bg-slate-700/50 text-slate-300 font-bold font-mono rounded-xl border border-slate-600">Bài: {problem.replace(/\\.[^/.]+$/, "")}</div>
             {violationCount > 0 && (
               <div className="px-4 py-2 bg-rose-500/20 text-rose-400 font-bold rounded-xl border border-rose-500/30 flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
@@ -299,3 +301,7 @@ export default function ExamRoom() {
     </main>
   );
 }
+`;
+
+fs.writeFileSync('src/app/thi/page.tsx', content, 'utf8');
+console.log('Done!');
