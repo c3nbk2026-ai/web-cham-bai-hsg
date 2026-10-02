@@ -159,7 +159,16 @@ export default function ExamRoom() {
               await py.runPythonAsync("try:\\n    exec(student_code, {})\\nexcept:\\n    pass");
               const actual = await py.runPythonAsync("sys.stdout.getvalue()");
               const norm = (s: string) => (s || "").replace(/\\r/g, "").split("\\n").map((l: string) => l.trimEnd()).join("\\n").trim();
-              if (norm(actual) === norm(t.out)) passed++;
+              const extractNums = (s: string) => (s || "").match(/-?\\d+(\\.\\d+)?/g) || [];
+              const actualNums = extractNums(actual);
+              const expectedNums = extractNums(t.out);
+              const isSmartMatch = actualNums.length > 0 && actualNums.join(",") === expectedNums.join(",");
+
+              if (norm(actual) === norm(t.out)) {
+                passed++;
+              } else if (isSmartMatch) {
+                passed += 0.5; // Diem vot nếu sai định dạng nhưng đúng kết quả số
+              }
             } catch(e) {}
           }
         }
