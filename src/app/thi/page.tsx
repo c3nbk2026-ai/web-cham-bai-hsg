@@ -276,26 +276,31 @@ export default function ExamRoom() {
             </button>
           </div>
         </div>
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
-          <div className="bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
-            <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2">
+        {/* Layout: Đề ở trên (ngang ~35%), Editor + IO ở dưới */}
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
+          {/* TOP: Problem Viewer - chiều cao cố định ~35% */}
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl" style={{height: '35%'}}>
+            <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
               Noi dung De Thi — {examItem?.problemName}
             </div>
             <iframe src={viewerUrl} className="w-full flex-1 border-0 bg-white" title="Noi dung de thi" />
           </div>
-          <div className="flex flex-col gap-4 min-h-0">
+          {/* BOTTOM: Editor + IO side by side */}
+          <div className="flex-1 flex gap-4 min-h-0">
+            {/* Editor */}
             <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
-              <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Trinh soan thao Python (Pyodide)</div>
+              <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0">Trinh soan thao Python (Pyodide)</div>
               <textarea className="w-full flex-1 p-6 bg-[#1e1e1e] text-cyan-300 font-mono text-[16px] focus:outline-none resize-none leading-relaxed" spellCheck={false} value={code} onChange={e => setCode(e.target.value)} disabled={isFinished} />
             </div>
-            <div className="flex-[2] flex gap-4 min-h-0">
+            {/* IO: STDIN + STDOUT stacked vertically */}
+            <div className="flex-[2] flex flex-col gap-4 min-h-0">
               <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
-                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Du lieu nhap (STDIN)</div>
+                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0">Du lieu nhap (STDIN)</div>
                 <textarea className="w-full flex-1 p-4 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" spellCheck={false} placeholder="Nhap du lieu dau vao de thu..." value={stdin} onChange={e => setStdin(e.target.value)} disabled={isFinished} />
               </div>
               <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
-                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Ket qua xuat (STDOUT)</div>
+                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0">Ket qua xuat (STDOUT)</div>
                 <textarea className={"w-full flex-1 p-4 font-mono text-sm focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Ket qua se hien thi o day sau khi bam Chay Code..." value={stdout} />
               </div>
             </div>
