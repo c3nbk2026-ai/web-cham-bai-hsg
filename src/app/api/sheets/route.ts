@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
@@ -14,7 +14,7 @@ async function askGemini(code, problem, maxScore) {
             body: JSON.stringify({
                 contents: [{
                     parts: [{
-                        text: "Đóng vai giáo viên chấm thi Python. Học sinh giải bài toán: \. Mã nguồn của học sinh:\n\n\\n\nCode này bị lỗi cú pháp hoặc chạy sai kết quả (chỉ đạt 0 điểm auto). Hãy đọc ý tưởng (khai báo biến, vòng lặp, if/else). Nếu có tư duy đúng, hãy cho điểm vớt từ 0 đến \ (có thể lẻ 0.5). Hãy phân tích và viết lời phê bằng Tiếng Việt. KẾT QUẢ CUỐI CÙNG BẮT BUỘC CHỈ LÀ MỘT CON SỐ DUY NHẤT (ví dụ: 1.5)."
+                        text: "Đóng vai giáo viên. Học sinh giải bài: \. Code:\n\\n\nCode lỗi cú pháp/chạy sai (auto 0 điểm). Hãy đọc ý tưởng, nếu có tư duy đúng, cho điểm vớt (0 đến \). Viết lời phê bằng Tiếng Việt CỰC KỲ NGẮN GỌN (Tối đa 1 câu). KẾT QUẢ CUỐI CÙNG BẮT BUỘC CHỈ LÀ MỘT CON SỐ DUY NHẤT."
                     }]
                 }]
             })
@@ -22,14 +22,20 @@ async function askGemini(code, problem, maxScore) {
         const data = await response.json();
         const parts = data.candidates?.[0]?.content?.parts || [];
         
-        // Lấy con số ở phần tử cuối cùng bằng regex
-        const text = parts[parts.length - 1]?.text || "0";
-        const matches = text.match(/\d+(\.\d+)?/g);
+        // Loại bỏ hoàn toàn khối thought (suy nghĩ nội bộ dài dòng)
+        const textParts = parts.filter(p => !p.thought);
+        const finalContent = textParts.map(p => p.text).join("\n").trim();
+        
+        // Trích xuất số cuối cùng
+        const matches = finalContent.match(/\d+(\.\d+)?/g);
         const numStr = matches ? matches[matches.length - 1] : "0";
         const num = parseFloat(numStr);
         
-        // Lấy lời phê: gộp toàn bộ text lại vì AI có thể trả lời phê vào block cuối
-        let reasoning = parts.map(p => p.text).join("\n\n").trim();
+        // Lọc lời phê: bỏ con số cuối đi và giới hạn 150 ký tự
+        let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " "").trim();
+        if (reasoning.length > 150) {
+            reasoning = reasoning.substring(0, 150) + "...";
+        }
 
         return {
             score: isNaN(num) ? 0 : num,
@@ -47,24 +53,21 @@ export async function POST(req: Request) {
         let { studentName, mode, week, category, problem, score, maxScore, errorMsg, code } = body;
         
         let numScore = parseFloat(score) || 0;
-        const originalScore = numScore; // Lưu lại điểm gốc
+        const originalScore = numScore; 
         let numMaxScore = parseFloat(maxScore) || 0;
 
-        // Tích hợp AI chấm vớt nếu điểm hệ thống thấp hơn tối đa
         if (numScore < numMaxScore && numMaxScore > 0) {
             const extractCode = code.split("--- KET QUA CHAY TAY ---")[0]; 
             const aiResult = await askGemini(extractCode, problem, numMaxScore);
             if (aiResult.score > numScore) {
                 numScore = aiResult.score;
-                const aiNote = "\n\n[🤖 AI VỚT ĐIỂM]\n- Điểm gốc máy chấm: \/\\n- Điểm AI chấm lại: \/\\n- Lời phê của AI:\n\";
+                const aiNote = " [AI VỚT: \->\đ] Lời phê: \";
                 errorMsg = (errorMsg || "") + aiNote;
                 score = numScore.toString();
             }
         }
 
         if (SPREADSHEET_ID === "YOUR_SPREADSHEET_ID_HERE") {
-            console.log("Demo mode: Data that WOULD be sent to Google Sheets:");
-            console.dir(body);
             return NextResponse.json({ success: true, demo: true });
         }
 
@@ -115,7 +118,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
-        console.error("Lỗi đồng bộ Google Sheets:", error);
+        console.error("Lỗi:", error);
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
