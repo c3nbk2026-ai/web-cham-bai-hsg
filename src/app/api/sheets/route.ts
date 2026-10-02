@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
@@ -20,7 +20,8 @@ async function askGemini(code, problem, maxScore) {
             })
         });
         const data = await response.json();
-        const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "0";
+        const parts = data.candidates?.[0]?.content?.parts || [];
+        const text = parts[parts.length - 1]?.text || "0";
         const num = parseFloat(text.trim());
         return isNaN(num) ? 0 : num;
     } catch (e) {
