@@ -1,4 +1,4 @@
-import { NextResponse } from 'next/server';
+﻿import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
@@ -8,8 +8,14 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 async function askGemini(code, problem, maxScore) {
     if (!GEMINI_API_KEY) return { score: 0, reasoning: "Lỗi: Vercel không đọc được GEMINI_API_KEY" };
     if (!code.trim()) return { score: 0, reasoning: "Lỗi: Code rỗng" };
+    
+    // Debug API Key (chỉ lấy 5 ký tự đầu và cuối để kiểm chứng)
+    const keyPrefix = GEMINI_API_KEY.substring(0, 5);
+    const keySuffix = GEMINI_API_KEY.slice(-5);
+    const keyLength = GEMINI_API_KEY.length;
+
     try {
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent?key=${GEMINI_API_KEY}", {
+        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent?key=${GEMINI_API_KEY.trim()}", {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -23,7 +29,7 @@ async function askGemini(code, problem, maxScore) {
         const data = await response.json();
         
         if (data.error) {
-            return { score: 0, reasoning: "Lỗi API: " + data.error.message };
+            return { score: 0, reasoning: "Lỗi API (\...\, len:\): " + data.error.message };
         }
 
         const parts = data.candidates?.[0]?.content?.parts || [];
@@ -34,7 +40,7 @@ async function askGemini(code, problem, maxScore) {
         const numStr = matches ? matches[matches.length - 1] : "0";
         const num = parseFloat(numStr);
         
-        let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " ").trim();
+        let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " "").trim();
         if (reasoning.length > 150) {
             reasoning = reasoning.substring(0, 150) + "...";
         }
@@ -61,7 +67,6 @@ export async function POST(req: Request) {
             const extractCode = code.split("--- KET QUA CHAY TAY ---")[0]; 
             const aiResult = await askGemini(extractCode, problem, numMaxScore);
             
-            // LUÔN LUÔN ghi log ra sheet để debug, dù điểm là 0
             if (aiResult.score > numScore) {
                 numScore = aiResult.score;
             }
