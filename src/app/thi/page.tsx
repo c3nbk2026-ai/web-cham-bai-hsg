@@ -7,7 +7,7 @@ export default function ExamRoom() {
   const [structure, setStructure] = useState<any>({});
   const [className, setClassName] = useState("10A1");
   const [testFolder, setTestFolder] = useState("");
-  const [problem, setProblem] = useState(""); // Lưu tên bài (VD: BAI1)
+  const [problem, setProblem] = useState(""); // Lưu tên file đầy đủ (VD: BAI1.pdf, BAI1.docx)
   const [code, setCode] = useState("# Viết code tại đây\n");
   
   // Terminal I/O states
@@ -111,7 +111,7 @@ export default function ExamRoom() {
           }
       });
       
-      if (allProblems.length === 0) return alert("Hệ thống chưa tìm thấy bài thi nào! Hãy đảm bảo bạn đã lưu đề thi dưới dạng file PDF (ví dụ: DE_THI.pdf) và đặt vào thư mục data/DE_KTGK/");
+      if (allProblems.length === 0) return alert("Hệ thống chưa tìm thấy bài thi nào! Hãy đảm bảo bạn đã copy file .pdf hoặc .docx vào thư mục data/DE_KTGK/");
       
       const randomProblem = allProblems[Math.floor(Math.random() * allProblems.length)];
       setProblem(randomProblem.problem);
@@ -198,7 +198,7 @@ sys.stdout = io.StringIO()
                       mode: 'DE_THI',
                       week: className, // Gửi tên LỚP vào cột TUẦN
                       category: 'DE_THI',
-                      problem,
+                      problem: problem.replace(/\.[^/.]+$/, ""), // Bỏ đuôi mở rộng khi gửi
                       score: "Chờ chấm", // Không tự động chấm nữa
                       maxScore: "N/A",
                       errorMsg: `Vi phạm: ${violationCount} lần. (Output cuối: ${stdout.substring(0, 50).replace(/\n/g, " ")})`,
@@ -283,6 +283,19 @@ sys.stdout = io.StringIO()
       );
   }
 
+  // Khởi tạo URL viewer cho Iframe
+  let viewerUrl = "";
+  if (problem) {
+      if (problem.toLowerCase().endsWith('.docx')) {
+          // Dùng Office Viewer của Microsoft (Yêu cầu URL tuyệt đối của web đã publish)
+          const absoluteUrl = `${window.location.origin}/data/${testFolder}/${problem}`;
+          viewerUrl = `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(absoluteUrl)}`;
+      } else {
+          // Mặc định là PDF
+          viewerUrl = `/data/${testFolder}/${problem}#toolbar=0&navpanes=0`;
+      }
+  }
+
   return (
     <main className="min-h-screen bg-slate-900 p-4 font-sans text-white select-none relative z-[99999]">
       <div className="max-w-[1600px] mx-auto flex flex-col gap-4 h-[calc(100vh-2rem)]">
@@ -294,7 +307,7 @@ sys.stdout = io.StringIO()
                     {studentName} - {className}
                 </div>
                 <div className="px-4 py-2 bg-slate-700/50 text-slate-300 font-bold font-mono rounded-xl border border-slate-600">
-                    Bài: {problem}
+                    Bài: {problem.replace(/\.[^/.]+$/, "")}
                 </div>
                 {violationCount > 0 && (
                     <div className="px-4 py-2 bg-rose-500/20 text-rose-400 font-bold rounded-xl border border-rose-500/30 flex items-center gap-2">
@@ -324,10 +337,10 @@ sys.stdout = io.StringIO()
             </div>
         </div>
 
-        {/* Main Workspace: Left (PDF) and Right (Editor + IO) */}
+        {/* Main Workspace: Left (PDF/DOCX) and Right (Editor + IO) */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 min-h-0">
             
-            {/* Left: Problem PDF Viewer */}
+            {/* Left: Problem Viewer */}
             <div className="bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
                 <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 flex justify-between items-center text-xs font-bold text-slate-400">
                     <span className="flex items-center gap-2">
@@ -335,9 +348,9 @@ sys.stdout = io.StringIO()
                         Nội dung Đề Thi
                     </span>
                 </div>
-                {/* Lấy trực tiếp PDF từ thư mục DE_ (VD: /data/DE_KTGK/BAI1.pdf) */}
+                {/* Iframe thông minh hỗ trợ cả PDF và DOCX (qua Microsoft Viewer) */}
                 <iframe 
-                    src={`/data/${testFolder}/${problem}.pdf#toolbar=0&navpanes=0`} 
+                    src={viewerUrl} 
                     className="w-full flex-1 border-0 bg-white"
                     title="Nội dung đề thi"
                 />

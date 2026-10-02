@@ -9,23 +9,23 @@ export async function GET() {
     try {
         if (!fs.existsSync(dataDir)) return NextResponse.json({});
         
-        // Quét các thư mục TUAN (dành cho HSG) và các thư mục bắt đầu bằng DE_ (dành cho thi định kỳ, VD: DE_KTGK)
+        // Quét các thư mục TUAN (dành cho HSG) và các thư mục bắt đầu bằng DE_ (dành cho thi định kỳ)
         const folders = fs.readdirSync(dataDir).filter(f => f.startsWith('TUAN') || f.startsWith('DE_'));
         
         for (const folder of folders) {
             tree[folder] = { "TL_TU_HOC": [], "DE_THI": [] };
             
             if (folder.startsWith('DE_')) {
-                // Với thư mục đề thi (DE_KTGK), đọc trực tiếp các file PDF ngay bên trong thư mục đó
+                // Với thư mục đề thi (DE_KTGK), đọc trực tiếp cả file PDF VÀ DOCX
                 const folderPath = path.join(dataDir, folder);
                 if (fs.existsSync(folderPath)) {
                     const files = fs.readdirSync(folderPath)
-                        .filter(f => f.toLowerCase().endsWith('.pdf'))
-                        .map(f => f.slice(0, -4)); // Bỏ đuôi .pdf để lấy tên bài
+                        .filter(f => f.toLowerCase().endsWith('.pdf') || f.toLowerCase().endsWith('.docx'));
+                    // Giữ nguyên phần mở rộng (.pdf, .docx) để client biết cách hiển thị
                     tree[folder]["DE_THI"] = files;
                 }
             } else {
-                // Với TUAN (HSG), đọc các TestCases
+                // Với TUAN (HSG)
                 const getDirs = (paths: string[]) => {
                     for (const p of paths) {
                         const fullPath = path.join(dataDir, folder, ...p.split('/'));
@@ -47,6 +47,7 @@ export async function GET() {
                     'DE_THI/TestCases',
                     'DE_THI/BO_TEST'
                 ]);
+                // Đối với chế độ cũ, cần lấy tên thư mục
                 tree[folder]["DE_THI"] = deThiDirs.length > 0 ? deThiDirs : tuHocDirs;
             }
         }
