@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
@@ -40,7 +40,7 @@ async function askGemini(code, problem, maxScore) {
         const numStr = matches ? matches[matches.length - 1] : "0";
         const num = parseFloat(numStr);
         
-        let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " "").trim();
+        let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " ").trim();
         if (reasoning.length > 150) {
             reasoning = reasoning.substring(0, 150) + "...";
         }
