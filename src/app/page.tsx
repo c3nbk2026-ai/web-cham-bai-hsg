@@ -17,6 +17,11 @@ export default function Home() {
   const [studentName,
               mode, setStudentName] = useState("");
   const [students, setStudents] = useState<string[]>([]);
+  const [showTheoryModal, setShowTheoryModal] = useState(false);
+  const [theoryUrl, setTheoryUrl] = useState('');
+  const [docsTree, setDocsTree] = useState<any>({});
+  const [showTheoryModal, setShowTheoryModal] = useState(false);
+  const [theoryUrl, setTheoryUrl] = useState('');
 
   useEffect(() => {
     fetch("/api/tests")
@@ -139,7 +144,12 @@ sys.stdout = io.StringIO()
 
       setResults(testResults);
 
-      const firstError = testResults.find(r => r.err)?.err || (passedCount < testCases.length ? "Sai Logic / KhÃ´ng khá»›p Output" : "HoÃ n háº£o");
+      // Luu lich su
+        const history = JSON.parse(localStorage.getItem('submissionHistory') || '[]');
+        history.unshift({ date: new Date().toLocaleString('vi-VN'), week, problem, score, maxScore: testCases.length, code });
+        localStorage.setItem('submissionHistory', JSON.stringify(history.slice(0, 30)));
+
+        const firstError = testResults.find(r => r.err)?.err || (passedCount < testCases.length ? "Sai Logic / KhÃ´ng khá»›p Output" : "HoÃ n háº£o");
 
       await fetch('/api/sheets', {
           method: 'POST',
@@ -282,6 +292,11 @@ sys.stdout = io.StringIO()
                 <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
               </div>
               <div className="flex gap-3">
+                <button onClick={() => {
+                  const weekDocs = docsTree[week] || [];
+                  const doc = weekDocs.find((d: any) => d.mode === 'ALL' || d.mode === mode) || weekDocs[0];
+                  if(doc) { setTheoryUrl(doc.url); setShowTheoryModal(true); } else { alert('Chưa có lý thuyết cho tuần này'); }
+                }} className="flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm">📖 Lý Thuyết</button>
                 {results.length > 0 && (
                   <button onClick={exportResults} className="flex items-center gap-2 bg-white hover:bg-slate-50 text-indigo-600 px-4 py-2 rounded-xl text-sm font-bold transition-all border border-slate-200 shadow-sm hover:shadow">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
@@ -368,9 +383,26 @@ sys.stdout = io.StringIO()
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
       `}} />
-    </main>
+    {showTheoryModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl h-[90vh] flex flex-col overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+              <h3 className="font-bold text-lg text-slate-800">Lý thuyết đang học</h3>
+              <button onClick={() => setShowTheoryModal(false)} className="text-slate-400 hover:text-rose-500">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+              </button>
+            </div>
+            <iframe src={theoryUrl + '#toolbar=1&navpanes=0'} className="w-full flex-1 border-0" />
+          </div>
+        </div>
+      )}
+</main>
   );
 }
+
+
+
+
 
 
 
