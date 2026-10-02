@@ -5,7 +5,8 @@ import Script from "next/script";
 
 export default function ExamRoom() {
   const [structure, setStructure] = useState<any>({});
-  const [week, setWeek] = useState("");
+  const [className, setClassName] = useState("10A1");
+  const [testFolder, setTestFolder] = useState("");
   const [problem, setProblem] = useState("");
   const [code, setCode] = useState("# Viết code tại đây\n");
   const [results, setResults] = useState<any[]>([]);
@@ -23,15 +24,13 @@ export default function ExamRoom() {
   const [isFinished, setIsFinished] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
 
+  const classes = ["10A1", "10A2", "10A3", "10A4", "10A5", "10A6", "10A7", "10A8", "10A9", "10A10"];
+
   useEffect(() => {
     fetch("/api/tests")
       .then((res) => res.json())
       .then((data) => {
         setStructure(data);
-        const weeks = Object.keys(data);
-        if (weeks.length > 0) {
-          setWeek(weeks[0]);
-        }
       });
 
     fetch("/data/students.json")
@@ -99,11 +98,19 @@ export default function ExamRoom() {
   }, [isExamStarted, isFinished, problem, code]);
 
   const drawExam = () => {
-      const problems = structure[week]?.["DE_THI"] || [];
-      if (problems.length === 0) return alert("Thư mục ngân hàng đề này chưa có bài thi nào!");
+      // Gom tất cả các bài thi (DE_THI) từ tất cả các thư mục trong data/
+      let allProblems: {folder: string, problem: string}[] = [];
+      Object.keys(structure).forEach(folder => {
+          if(structure[folder]["DE_THI"]) {
+              structure[folder]["DE_THI"].forEach((p: string) => allProblems.push({folder, problem: p}));
+          }
+      });
+
+      if (allProblems.length === 0) return alert("Hệ thống chưa có đề thi nào trong mục DE_THI!");
       
-      const randomIndex = Math.floor(Math.random() * problems.length);
-      setProblem(problems[randomIndex]);
+      const randomP = allProblems[Math.floor(Math.random() * allProblems.length)];
+      setProblem(randomP.problem);
+      setTestFolder(randomP.folder);
       setHasDrawn(true);
   };
 
@@ -134,7 +141,7 @@ export default function ExamRoom() {
 
   const getTestUrl = (testName: string, ext: string) => {
     const problemName = problem.replace("TEST_", "");
-    return `/data/${week}/DE_THI/TestCases/${problem}/${testName}/${problemName}.${ext}`;
+    return `/data/${testFolder}/DE_THI/TestCases/${problem}/${testName}/${problemName}.${ext}`;
   };
 
   const submitCode = async (isAutoSubmit = false) => {
@@ -149,15 +156,15 @@ export default function ExamRoom() {
       const testCases = [];
       const maxTests = 20; // Đề thi kiểm tra tối đa 20 test
       for (let i = 1; i <= maxTests; i++) {
-        const testFolder = `Test${i.toString().padStart(2, "0")}`;
+        const testCaseFolder = `Test${i.toString().padStart(2, "0")}`;
         try {
-          const inpRes = await fetch(getTestUrl(testFolder, "INP"));
-          const outRes = await fetch(getTestUrl(testFolder, "OUT"));
+          const inpRes = await fetch(getTestUrl(testCaseFolder, "INP"));
+          const outRes = await fetch(getTestUrl(testCaseFolder, "OUT"));
           
           if (!inpRes.ok || !outRes.ok) break;
           
           testCases.push({
-            name: testFolder,
+            name: testCaseFolder,
             inp: await inpRes.text(),
             out: (await outRes.text()).trim(),
           });
@@ -229,7 +236,7 @@ sys.stdout = io.StringIO()
                   body: JSON.stringify({
                       studentName,
                       mode: 'DE_THI',
-                      week,
+                      week: className, // Gửi tên LỚP vào cột TUẦN trên Google Sheet!
                       category: 'DE_THI',
                       problem,
                       score: passedCount,
@@ -292,9 +299,9 @@ sys.stdout = io.StringIO()
                       </div>
                       
                       <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chọn Ngân Hàng Đề</label>
-                        <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={week} onChange={e => { setWeek(e.target.value); setHasDrawn(false); }}>
-                            {Object.keys(structure).map(w => <option key={w} value={w}>{w}</option>)}
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chọn Lớp</label>
+                        <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={className} onChange={e => { setClassName(e.target.value); setHasDrawn(false); }}>
+                            {classes.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                       </div>
 
@@ -326,7 +333,7 @@ sys.stdout = io.StringIO()
         <div className="bg-slate-800 rounded-2xl p-4 flex justify-between items-center border border-slate-700 shadow-xl shrink-0">
             <div className="flex items-center gap-4">
                 <div className="px-4 py-2 bg-indigo-500/20 text-indigo-300 font-bold rounded-xl border border-indigo-500/30">
-                    {studentName}
+                    {studentName} - {className}
                 </div>
                 <div className="px-4 py-2 bg-slate-700/50 text-slate-300 font-bold font-mono rounded-xl border border-slate-600">
                     Bài: {problem}
