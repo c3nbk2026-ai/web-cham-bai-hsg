@@ -53,9 +53,10 @@ export default function RootLayout({
                 <Link href="/" className="px-3 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all">
                   Trình Chấm Code
                 </Link>
-                <Link href="/tu-hoc" className="px-3 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all">
+                {/* Thay Link bằng thẻ a để force reload, xóa state file PDF đang mở */}
+                <a href="/tu-hoc" className="px-3 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all">
                   Tài Liệu Tự Học
-                </Link>
+                </a>
                 <a href="#" className="hidden sm:inline-flex px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-white text-sm font-bold shadow-md shadow-indigo-500/20 hover:scale-105 transition-transform">
                   Học Sinh
                 </a>
