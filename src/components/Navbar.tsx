@@ -1,9 +1,11 @@
 "use client";
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useMode } from './ModeContext';
 
 export default function Navbar() {
+    const pathname = usePathname();
     const { mode, setMode } = useMode();
     const [showHistory, setShowHistory] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
@@ -14,6 +16,8 @@ export default function Navbar() {
             setHistory(h);
         }
     }, [showHistory]);
+
+    if (pathname === '/thi') return null;
 
     return (
         <header className="bg-white/70 backdrop-blur-2xl border-b border-white/50 shadow-sm sticky top-0 z-50">

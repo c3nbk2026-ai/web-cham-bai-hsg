@@ -14,12 +14,14 @@ export default function ExamRoom() {
   
   const [studentName, setStudentName] = useState("");
   const [students, setStudents] = useState<string[]>([]);
+  const [isStudentLocked, setIsStudentLocked] = useState(false);
   
   // Exam states
   const [isExamStarted, setIsExamStarted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes
   const [violationCount, setViolationCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
+  const [hasDrawn, setHasDrawn] = useState(false);
 
   useEffect(() => {
     fetch("/api/tests")
@@ -36,16 +38,18 @@ export default function ExamRoom() {
       .then(res => res.json())
       .then(data => {
           setStudents(data);
-          if (data.length > 0) setStudentName(data[0]);
+          if (data.length > 0 && !isStudentLocked) setStudentName(data[0]);
       })
       .catch(() => console.log("Không tìm thấy file danh sách học sinh"));
-  }, []);
-
-  useEffect(() => {
-    if (structure[week] && structure[week]["DE_THI"]) {
-      setProblem(structure[week]["DE_THI"][0] || "");
+      
+    // Đọc tên học sinh từ URL (tinhoc1026 truyền sang)
+    const params = new URLSearchParams(window.location.search);
+    const studentParam = params.get('student');
+    if (studentParam) {
+        setStudentName(studentParam);
+        setIsStudentLocked(true);
     }
-  }, [week, structure]);
+  }, []);
 
   // Anti-cheat & Timer
   useEffect(() => {
@@ -94,9 +98,18 @@ export default function ExamRoom() {
     return () => clearInterval(timer);
   }, [isExamStarted, isFinished, problem, code]);
 
+  const drawExam = () => {
+      const problems = structure[week]?.["DE_THI"] || [];
+      if (problems.length === 0) return alert("Thư mục ngân hàng đề này chưa có bài thi nào!");
+      
+      const randomIndex = Math.floor(Math.random() * problems.length);
+      setProblem(problems[randomIndex]);
+      setHasDrawn(true);
+  };
+
   const startExam = () => {
     if (!studentName) return alert("Vui lòng nhập tên học sinh!");
-    if (!problem) return alert("Không có đề thi nào trong tuần này!");
+    if (!problem) return alert("Vui lòng bốc thăm đề thi trước!");
     
     try {
         document.documentElement.requestFullscreen().then(() => {
@@ -252,7 +265,7 @@ sys.stdout = io.StringIO()
 
   if (!isExamStarted) {
       return (
-          <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4">
+          <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative z-[99999]">
               <Script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js" />
               <div className="bg-white p-10 rounded-3xl max-w-md w-full shadow-2xl flex flex-col items-center">
                   <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mb-6 text-rose-600">
@@ -260,35 +273,45 @@ sys.stdout = io.StringIO()
                   </div>
                   <h1 className="text-2xl font-black text-slate-800 mb-2">Phòng Thi Khép Kín</h1>
                   <p className="text-slate-500 text-center text-sm font-medium mb-8">
-                      Bạn sắp bước vào kỳ thi thực hành. Mọi hành vi thoát toàn màn hình hoặc chuyển sang ứng dụng khác đều sẽ bị ghi lại và trừ điểm.
+                      Mọi hành vi thoát toàn màn hình hoặc chuyển sang ứng dụng khác đều sẽ bị ghi lại và trừ điểm.
                   </p>
                   
                   <div className="w-full space-y-4">
                       <div>
-                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chọn tên của bạn</label>
-                          <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-indigo-700" value={studentName} onChange={e => setStudentName(e.target.value)}>
-                              {students.map(s => <option key={s} value={s}>{s}</option>)}
-                          </select>
+                          <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tên của bạn</label>
+                          {isStudentLocked ? (
+                              <div className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-xl font-bold text-indigo-700 flex items-center justify-between">
+                                  <span>{studentName}</span>
+                                  <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                              </div>
+                          ) : (
+                              <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-indigo-700" value={studentName} onChange={e => setStudentName(e.target.value)}>
+                                  {students.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                          )}
                       </div>
                       
-                      <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Kỳ Thi</label>
-                            <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={week} onChange={e => setWeek(e.target.value)}>
-                                {Object.keys(structure).map(w => <option key={w} value={w}>{w}</option>)}
-                            </select>
-                          </div>
-                          <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Bài Thi</label>
-                            <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={problem} onChange={e => setProblem(e.target.value)}>
-                                {structure[week]?.["DE_THI"]?.map((p: string) => <option key={p} value={p}>{p}</option>)}
-                            </select>
-                          </div>
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chọn Ngân Hàng Đề</label>
+                        <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={week} onChange={e => { setWeek(e.target.value); setHasDrawn(false); }}>
+                            {Object.keys(structure).map(w => <option key={w} value={w}>{w}</option>)}
+                        </select>
                       </div>
 
-                      <button onClick={startExam} className="w-full mt-6 bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-600/30 transition-transform active:scale-95 text-lg">
-                          BẮT ĐẦU THI
-                      </button>
+                      {!hasDrawn ? (
+                          <button onClick={drawExam} className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-amber-500/30 transition-transform active:scale-95 text-lg flex justify-center items-center gap-2">
+                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+                              BỐC THĂM ĐỀ THI
+                          </button>
+                      ) : (
+                          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl mt-4 text-center">
+                              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Đề thi của bạn:</div>
+                              <div className="text-xl font-black text-emerald-700">{problem}</div>
+                              <button onClick={startExam} className="w-full mt-4 bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-600/30 transition-transform active:scale-95 text-lg">
+                                  VÀO PHÒNG THI
+                              </button>
+                          </div>
+                      )}
                   </div>
               </div>
           </div>
@@ -296,7 +319,7 @@ sys.stdout = io.StringIO()
   }
 
   return (
-    <main className="min-h-screen bg-slate-900 p-4 font-sans text-white select-none relative z-[9999]">
+    <main className="min-h-screen bg-slate-900 p-4 font-sans text-white select-none relative z-[99999]">
       <div className="max-w-[1600px] mx-auto flex flex-col gap-4 h-[calc(100vh-2rem)]">
         
         {/* Top Header */}
