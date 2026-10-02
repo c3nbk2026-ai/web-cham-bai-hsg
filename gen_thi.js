@@ -285,7 +285,8 @@ export default function ExamRoom() {
               Noi dung De Thi — {examItem?.problemName}
             </div>
             <div className="w-full flex-1 relative overflow-hidden bg-white">
-              <iframe src={viewerUrl} className="absolute top-0 left-0 w-full h-[calc(100%+38px)] border-0" title="Noi dung de thi" />
+              {/* Hack: Mở rộng iframe ra 124% và dịch sang trái 12% để cắt bỏ lề giấy trắng 2 bên, ép chữ to lên */}
+              <iframe src={viewerUrl} className="absolute top-0 left-[-12%] w-[124%] h-[calc(100%+38px)] border-0" title="Noi dung de thi" />
             </div>
           </div>
           <div className="flex flex-col gap-4 min-h-0">
