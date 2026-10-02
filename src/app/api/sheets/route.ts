@@ -1,4 +1,4 @@
-﻿import { NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
@@ -22,15 +22,14 @@ async function askGemini(code, problem, maxScore) {
         const data = await response.json();
         const parts = data.candidates?.[0]?.content?.parts || [];
         
-        // Lấy con số ở phần tử cuối cùng
+        // Lấy con số ở phần tử cuối cùng bằng regex
         const text = parts[parts.length - 1]?.text || "0";
-        const num = parseFloat(text.trim());
+        const matches = text.match(/\d+(\.\d+)?/g);
+        const numStr = matches ? matches[matches.length - 1] : "0";
+        const num = parseFloat(numStr);
         
-        // Lấy lời phê ở phần suy nghĩ (thought) hoặc các phần text trước đó
-        let reasoning = "";
-        if (parts.length > 1) {
-            reasoning = parts.slice(0, -1).map(p => p.text).join("\n").trim();
-        }
+        // Lấy lời phê: gộp toàn bộ text lại vì AI có thể trả lời phê vào block cuối
+        let reasoning = parts.map(p => p.text).join("\n\n").trim();
 
         return {
             score: isNaN(num) ? 0 : num,
