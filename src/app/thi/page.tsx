@@ -3,11 +3,18 @@
 import { useState, useEffect } from "react";
 import Script from "next/script";
 
+// Kiểu dữ liệu đề thi từ API
+interface ExamItem {
+  file: string;        // "1.docx"
+  deFolderName: string; // "De01"
+  problemName: string;  // "DIEM"
+}
+
 export default function ExamRoom() {
   const [structure, setStructure] = useState<any>({});
   const [className, setClassName] = useState("10A1");
   const [testFolder, setTestFolder] = useState("");
-  const [problem, setProblem] = useState("");
+  const [examItem, setExamItem] = useState<ExamItem | null>(null);
   const [code, setCode] = useState("# Viết code tại đây\n");
   const [stdin, setStdin] = useState("");
   const [stdout, setStdout] = useState("");
@@ -40,10 +47,10 @@ export default function ExamRoom() {
   useEffect(() => {
     if (!isExamStarted || isFinished) return;
     const handleVisibility = () => {
-      if (document.hidden) { setViolationCount(c => c + 1); alert("CẢNH BÁO GIAN LẬN: Bạn vừa chuyển tab! Vi phạm đã được ghi lại."); }
+      if (document.hidden) { setViolationCount(c => c + 1); alert("CANH BAO GIAN LAN: Ban vua chuyen tab! Vi pham da duoc ghi lai."); }
     };
     const handleFullscreen = () => {
-      if (!document.fullscreenElement) { setViolationCount(c => c + 1); alert("CẢNH BÁO GIAN LẬN: Bạn vừa thoát toàn màn hình! Vi phạm đã được ghi lại."); }
+      if (!document.fullscreenElement) { setViolationCount(c => c + 1); alert("CANH BAO GIAN LAN: Ban vua thoat toan man hinh! Vi pham da duoc ghi lai."); }
     };
     const handleContext = (e: Event) => e.preventDefault();
     document.addEventListener("visibilitychange", handleVisibility);
@@ -60,28 +67,28 @@ export default function ExamRoom() {
     if (!isExamStarted || isFinished) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) { clearInterval(timer); alert("HẾT GIỜ! Hệ thống tự động thu bài."); submitCode(true); return 0; }
+        if (prev <= 1) { clearInterval(timer); alert("HET GIO! He thong tu dong thu bai."); submitCode(true); return 0; }
         return prev - 1;
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isExamStarted, isFinished, problem, code, stdout]);
+  }, [isExamStarted, isFinished]);
 
   const drawExam = () => {
-    let all: {folder: string, problem: string}[] = [];
+    let all: {folder: string, item: ExamItem}[] = [];
     Object.keys(structure).forEach(folder => {
-      if (folder.startsWith('DE_') && structure[folder]["DE_THI"]) {
-        structure[folder]["DE_THI"].forEach((p: string) => all.push({folder, problem: p}));
+      if (folder.startsWith('DE_') && Array.isArray(structure[folder]["DE_THI"])) {
+        structure[folder]["DE_THI"].forEach((item: ExamItem) => all.push({folder, item}));
       }
     });
-    if (all.length === 0) return alert("Chưa tìm thấy bài thi! Hãy thêm file vào thư mục DE_KTGK/");
+    if (all.length === 0) return alert("Chua tim thay bai thi nao!");
     const r = all[Math.floor(Math.random() * all.length)];
-    setProblem(r.problem); setTestFolder(r.folder); setHasDrawn(true);
+    setExamItem(r.item); setTestFolder(r.folder); setHasDrawn(true);
   };
 
   const startExam = () => {
-    if (!studentName) return alert("Vui lòng chọn tên học sinh!");
-    if (!problem) return alert("Vui lòng bốc thăm đề thi trước!");
+    if (!studentName) return alert("Vui long chon ten hoc sinh!");
+    if (!examItem) return alert("Vui long boc tham de thi truoc!");
     document.documentElement.requestFullscreen().then(() => setIsExamStarted(true)).catch(() => setIsExamStarted(true));
   };
 
@@ -94,49 +101,48 @@ export default function ExamRoom() {
 
   const runCode = async () => {
     if (!code.trim()) return;
-    setIsLoading(true); setIsOutputError(false); setStdout("Đang chạy code...");
+    setIsLoading(true); setIsOutputError(false); setStdout("Dang chay code...");
     try {
       const py = await initPyodide();
-      if (!py) throw new Error("Chưa tải được Python.");
+      if (!py) throw new Error("Chua tai duoc Python.");
       py.globals.set("custom_input_data", stdin);
       py.globals.set("student_code", code);
       await py.runPythonAsync("import sys, io, traceback\nsys.stdin = io.StringIO(custom_input_data)\nsys.stdout = io.StringIO()");
-      await py.runPythonAsync("try:\n    exec(student_code, {})\nexcept Exception as e:\n    print('\\n--- CHƯƠNG TRÌNH BỊ LỖI ---')\n    traceback.print_exc(file=sys.stdout)");
+      await py.runPythonAsync("try:\n    exec(student_code, {})\nexcept Exception as e:\n    print('\\n--- CHUONG TRINH BI LOI ---')\n    traceback.print_exc(file=sys.stdout)");
       const out = await py.runPythonAsync("sys.stdout.getvalue()");
-      if (out.includes("--- CHƯƠNG TRÌNH BỊ LỖI ---")) setIsOutputError(true);
-      setStdout(out || "<Chương trình không in ra kết quả nào>");
-    } catch(e: any) { setIsOutputError(true); setStdout("LỖI HỆ THỐNG:\n" + e.toString()); }
+      if (out.includes("--- CHUONG TRINH BI LOI ---")) setIsOutputError(true);
+      setStdout(out || "<Chuong trinh khong in ra ket qua nao>");
+    } catch(e: any) { setIsOutputError(true); setStdout("LOI HE THONG:\n" + e.toString()); }
     finally { setIsLoading(false); }
   };
 
-  const tryFetch = async (basePath: string, exts: string[]) => {
-    for (const ext of exts) {
-      try { const r = await fetch(basePath + ext); if (r.ok) return await r.text(); } catch(e) {}
-    }
+  const tryFetch = async (url: string) => {
+    try { const r = await fetch(url); if (r.ok) return await r.text(); } catch(e) {}
     return null;
   };
 
   const submitCode = async (isAutoSubmit = false) => {
-    if (!problem) return;
-    if (!isAutoSubmit && !confirm("Bạn có chắc chắn muốn nộp bài? Hệ thống sẽ tự động chấm điểm và bạn KHÔNG THỂ sửa lại!")) return;
+    if (!examItem) return;
+    if (!isAutoSubmit && !confirm("Ban co chac chan muon nop bai? He thong se tu dong cham diem va ban KHONG THE sua lai!")) return;
     setIsSubmitting(true); setIsFinished(true);
 
-    const baseProblem = problem.replace(/\.[^/.]+$/, "");
+    const { deFolderName, problemName } = examItem;
+    // Tìm test cases: /data/DE_KTGK/Test_Case/De01/Test01/DIEM.INP
+    const testCaseBase = "/data/" + testFolder + "/Test_Case/" + deFolderName;
     
-    // Tìm và chấm Test Cases ẩn
     const testCases = [];
-    for (let i = 1; i <= 30; i++) {
+    for (let i = 1; i <= 20; i++) {
       const pad = i.toString().padStart(2, "0");
-      const base = "/data/" + testFolder + "/TestCases/" + baseProblem + "/Test" + pad + "/" + baseProblem;
-      const inp = await tryFetch(base, [".INP", ".inp"]);
-      const out = await tryFetch(base, [".OUT", ".out"]);
+      const base = testCaseBase + "/Test" + pad + "/" + problemName;
+      const inp = await tryFetch(base + ".INP") ?? await tryFetch(base + ".inp");
+      const out = await tryFetch(base + ".OUT") ?? await tryFetch(base + ".out");
       if (inp === null || out === null) break;
       testCases.push({ name: "Test" + pad, inp, out: out.trim() });
     }
 
-    let finalScore = "Chờ chấm";
+    let finalScore = "Cho cham";
     let finalMax = "N/A";
-    let finalMsg = "Vi phạm: " + violationCount + " lần.";
+    let finalMsg = "Vi pham: " + violationCount + " lan.";
 
     if (testCases.length > 0) {
       let passed = 0;
@@ -158,32 +164,31 @@ export default function ExamRoom() {
       } catch(e) {}
       finalScore = passed.toString();
       finalMax = testCases.length.toString();
-      finalMsg += " (Tự động chấm: " + passed + "/" + testCases.length + " Test Cases đúng)";
-      if (!isAutoSubmit) alert("Nộp bài thành công!\nĐiểm hệ thống chấm tự động: " + passed + "/" + testCases.length);
+      finalMsg += " (Tu dong cham: " + passed + "/" + testCases.length + " Test Cases dung)";
+      if (!isAutoSubmit) alert("Nop bai thanh cong!\nDiem he thong cham tu dong: " + passed + "/" + testCases.length);
     } else {
       if (!isAutoSubmit) {
-        const userInput = prompt("⚠️ Chưa có bộ Test tự động cho đề này.\nNhập TỔNG SỐ CÂU HỎI để giáo viên tự chấm (ví dụ: 5):", "5");
+        const userInput = prompt("Chua co bo Test tu dong cho de nay.\nNhap TONG SO CAU HOI de giao vien tu cham (vi du: 3):", "3");
         finalMax = userInput || "N/A";
-        alert("Đã ghi nhận bài nộp!");
+        alert("Da ghi nhan bai nop!");
       }
-      finalMsg += " (Output cuối: " + stdout.substring(0, 100).replace(/\n/g, " ") + ")";
+      finalMsg += " (Cham thu cong. Output: " + stdout.substring(0, 100).replace(/\n/g, " ") + ")";
     }
 
-    const fullSub = "--- MÃ NGUỒN ---\n" + code + "\n\n--- KẾT QUẢ CHẠY TAY ---\n" + stdout;
-    try {
-      for (let retries = 3; retries > 0; retries--) {
-        try {
-          const res = await fetch('/api/sheets', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentName, mode: 'DE_THI', week: className, category: 'DE_THI', problem: baseProblem, score: finalScore, maxScore: finalMax, errorMsg: finalMsg, code: fullSub })
-          });
-          if (res.ok) break;
-        } catch(e) {
-          if (retries === 1) alert("Mạng yếu! Hãy copy code nộp trực tiếp cho giáo viên.");
-          await new Promise(r => setTimeout(r, 2000));
-        }
+    const fullSub = "--- MA NGUON ---\n" + code + "\n\n--- KET QUA CHAY TAY ---\n" + stdout;
+    for (let retries = 3; retries > 0; retries--) {
+      try {
+        const res = await fetch('/api/sheets', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ studentName, mode: 'DE_THI', week: className, category: 'DE_THI', problem: problemName, score: finalScore, maxScore: finalMax, errorMsg: finalMsg, code: fullSub })
+        });
+        if (res.ok) break;
+      } catch(e) {
+        if (retries === 1) alert("Mang yeu! Hay copy code nop truc tiep cho giao vien.");
+        await new Promise(r => setTimeout(r, 2000));
       }
-    } finally { setIsSubmitting(false); }
+    }
+    setIsSubmitting(false);
   };
 
   const formatTime = (s: number) => Math.floor(s/60).toString().padStart(2,'0') + ':' + (s%60).toString().padStart(2,'0');
@@ -195,11 +200,11 @@ export default function ExamRoom() {
         <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mb-6 text-rose-600">
           <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
         </div>
-        <h1 className="text-2xl font-black text-slate-800 mb-2">Phòng Thi Khép Kín</h1>
-        <p className="text-slate-500 text-center text-sm font-medium mb-8">Mọi hành vi thoát toàn màn hình hoặc chuyển ứng dụng đều bị ghi lại và trừ điểm.</p>
+        <h1 className="text-2xl font-black text-slate-800 mb-2">Phong Thi Khep Kin</h1>
+        <p className="text-slate-500 text-center text-sm font-medium mb-8">Moi hanh vi thoat toan man hinh hoac chuyen ung dung deu bi ghi lai va tru diem.</p>
         <div className="w-full space-y-4">
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tên của bạn</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ten cua ban</label>
             {isStudentLocked ? (
               <div className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-xl font-bold text-indigo-700 flex items-center justify-between">
                 <span>{studentName}</span>
@@ -212,7 +217,7 @@ export default function ExamRoom() {
             )}
           </div>
           <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chọn Lớp</label>
+            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chon Lop</label>
             <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={className} onChange={e => { setClassName(e.target.value); setHasDrawn(false); }}>
               {classes.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -220,14 +225,15 @@ export default function ExamRoom() {
           {!hasDrawn ? (
             <button onClick={drawExam} className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-amber-500/30 transition-transform active:scale-95 text-lg flex justify-center items-center gap-2">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-              BỐC THĂM ĐỀ THI
+              BOC THAM DE THI
             </button>
           ) : (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl mt-4 text-center">
-              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Đề thi của bạn:</div>
-              <div className="text-xl font-black text-emerald-700">{problem}</div>
+              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">De thi cua ban:</div>
+              <div className="text-2xl font-black text-emerald-700">{examItem?.problemName}</div>
+              <div className="text-xs text-emerald-500 mt-1">{examItem?.file}</div>
               <button onClick={startExam} className="w-full mt-4 bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-600/30 transition-transform active:scale-95 text-lg">
-                VÀO PHÒNG THI
+                VAO PHONG THI
               </button>
             </div>
           )}
@@ -237,11 +243,11 @@ export default function ExamRoom() {
   );
 
   let viewerUrl = "";
-  if (problem) {
-    if (problem.toLowerCase().endsWith('.docx')) {
-      viewerUrl = "https://view.officeapps.live.com/op/embed.aspx?src=" + encodeURIComponent(window.location.origin + "/data/" + testFolder + "/" + problem);
+  if (examItem) {
+    if (examItem.file.toLowerCase().endsWith('.docx')) {
+      viewerUrl = "https://view.officeapps.live.com/op/embed.aspx?src=" + encodeURIComponent(window.location.origin + "/data/" + testFolder + "/" + examItem.file);
     } else {
-      viewerUrl = "/data/" + testFolder + "/" + problem + "#toolbar=0&navpanes=0";
+      viewerUrl = "/data/" + testFolder + "/" + examItem.file + "#toolbar=0&navpanes=0";
     }
   }
 
@@ -251,11 +257,11 @@ export default function ExamRoom() {
         <div className="bg-slate-800 rounded-2xl p-4 flex justify-between items-center border border-slate-700 shadow-xl shrink-0">
           <div className="flex items-center gap-4">
             <div className="px-4 py-2 bg-indigo-500/20 text-indigo-300 font-bold rounded-xl border border-indigo-500/30">{studentName} - {className}</div>
-            <div className="px-4 py-2 bg-slate-700/50 text-slate-300 font-bold font-mono rounded-xl border border-slate-600">Bài: {problem.replace(/\.[^/.]+$/, "")}</div>
+            <div className="px-4 py-2 bg-slate-700/50 text-slate-300 font-bold font-mono rounded-xl border border-slate-600">Bai: {examItem?.problemName}</div>
             {violationCount > 0 && (
               <div className="px-4 py-2 bg-rose-500/20 text-rose-400 font-bold rounded-xl border border-rose-500/30 flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                Vi phạm: {violationCount} lần
+                Vi pham: {violationCount} lan
               </div>
             )}
           </div>
@@ -263,10 +269,10 @@ export default function ExamRoom() {
             <div className={"text-3xl font-mono font-black mr-4 " + (timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400')}>{formatTime(timeLeft)}</div>
             <button onClick={runCode} disabled={isLoading || isFinished} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-900 transition-all disabled:opacity-50">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              {isLoading ? 'ĐANG CHẠY...' : 'CHẠY CODE'}
+              {isLoading ? 'DANG CHAY...' : 'CHAY CODE'}
             </button>
             <button onClick={() => submitCode(false)} disabled={isSubmitting || isFinished} className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-rose-900 transition-all disabled:opacity-50">
-              {isSubmitting ? 'ĐANG CHẤM...' : (isFinished ? 'ĐÃ NỘP BÀI' : 'NỘP BÀI')}
+              {isSubmitting ? 'DANG CHAM...' : (isFinished ? 'DA NOP BAI' : 'NOP BAI')}
             </button>
           </div>
         </div>
@@ -274,23 +280,23 @@ export default function ExamRoom() {
           <div className="bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-              Nội dung Đề Thi
+              Noi dung De Thi — {examItem?.problemName}
             </div>
-            <iframe src={viewerUrl} className="w-full flex-1 border-0 bg-white" title="Nội dung đề thi" />
+            <iframe src={viewerUrl} className="w-full flex-1 border-0 bg-white" title="Noi dung de thi" />
           </div>
           <div className="flex flex-col gap-4 min-h-0">
             <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
-              <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Trình soạn thảo Python (Pyodide)</div>
+              <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Trinh soan thao Python (Pyodide)</div>
               <textarea className="w-full flex-1 p-6 bg-[#1e1e1e] text-cyan-300 font-mono text-[16px] focus:outline-none resize-none leading-relaxed" spellCheck={false} value={code} onChange={e => setCode(e.target.value)} disabled={isFinished} />
             </div>
             <div className="flex-[2] flex gap-4 min-h-0">
               <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
-                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Dữ liệu nhập (STDIN)</div>
-                <textarea className="w-full flex-1 p-4 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" spellCheck={false} placeholder="Nhập dữ liệu đầu vào để thử..." value={stdin} onChange={e => setStdin(e.target.value)} disabled={isFinished} />
+                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Du lieu nhap (STDIN)</div>
+                <textarea className="w-full flex-1 p-4 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" spellCheck={false} placeholder="Nhap du lieu dau vao de thu..." value={stdin} onChange={e => setStdin(e.target.value)} disabled={isFinished} />
               </div>
               <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
-                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Kết quả xuất (STDOUT)</div>
-                <textarea className={"w-full flex-1 p-4 font-mono text-sm focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Kết quả sẽ hiển thị ở đây sau khi bấm Chạy Code..." value={stdout} />
+                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Ket qua xuat (STDOUT)</div>
+                <textarea className={"w-full flex-1 p-4 font-mono text-sm focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Ket qua se hien thi o day sau khi bam Chay Code..." value={stdout} />
               </div>
             </div>
           </div>

@@ -9,21 +9,46 @@ export async function GET() {
     try {
         if (!fs.existsSync(dataDir)) return NextResponse.json({});
         
-        // Quét các thư mục TUAN (dành cho HSG) và các thư mục bắt đầu bằng DE_ (dành cho thi định kỳ)
         const folders = fs.readdirSync(dataDir).filter(f => f.startsWith('TUAN') || f.startsWith('DE_'));
         
         for (const folder of folders) {
             tree[folder] = { "TL_TU_HOC": [], "DE_THI": [] };
             
             if (folder.startsWith('DE_')) {
-                // Với thư mục đề thi (DE_KTGK), đọc trực tiếp cả file PDF VÀ DOCX
+                // Đọc file .pdf và .docx làm danh sách đề thi
                 const folderPath = path.join(dataDir, folder);
-                if (fs.existsSync(folderPath)) {
-                    const files = fs.readdirSync(folderPath)
-                        .filter(f => f.toLowerCase().endsWith('.pdf') || f.toLowerCase().endsWith('.docx'));
-                    // Giữ nguyên phần mở rộng (.pdf, .docx) để client biết cách hiển thị
-                    tree[folder]["DE_THI"] = files;
-                }
+                const files = fs.readdirSync(folderPath)
+                    .filter(f => f.toLowerCase().endsWith('.pdf') || f.toLowerCase().endsWith('.docx'));
+                
+                // Với mỗi file đề, tìm thông tin TestCase tương ứng trong thư mục Test_Case
+                const deList = files.map(file => {
+                    const baseName = file.replace(/\.[^/.]+$/, ''); // VD: "1" từ "1.docx"
+                    
+                    // Tìm thư mục De tương ứng (De01, De02...) khớp theo số thứ tự
+                    const deNum = parseInt(baseName);
+                    if (!isNaN(deNum)) {
+                        const deFolderName = 'De' + deNum.toString().padStart(2, '0'); // "De01"
+                        const testCasePath = path.join(dataDir, folder, 'Test_Case', deFolderName, 'Test01');
+                        
+                        let problemName = baseName; // Mặc định dùng tên file
+                        if (fs.existsSync(testCasePath)) {
+                            // Lấy tên file INP để biết tên bài toán (VD: DIEM từ DIEM.INP)
+                            const inpFile = fs.readdirSync(testCasePath).find(f => f.toUpperCase().endsWith('.INP'));
+                            if (inpFile) {
+                                problemName = inpFile.replace(/\.[^/.]+$/, ''); // VD: "DIEM"
+                            }
+                        }
+                        
+                        return {
+                            file,          // "1.docx" - dùng để hiển thị viewer
+                            deFolderName,  // "De01" - dùng để tìm TestCases
+                            problemName,   // "DIEM" - tên file INP/OUT
+                        };
+                    }
+                    return { file, deFolderName: '', problemName: baseName };
+                });
+                
+                tree[folder]["DE_THI"] = deList;
             } else {
                 // Với TUAN (HSG)
                 const getDirs = (paths: string[]) => {
@@ -36,18 +61,10 @@ export async function GET() {
                     return [];
                 };
 
-                const tuHocDirs = getDirs([
-                    'TL_TU_HOC/BO_TEST',
-                    'TAI_LIEU/BO_TEST',
-                    'BO_TEST' 
-                ]);
+                const tuHocDirs = getDirs(['TL_TU_HOC/BO_TEST', 'TAI_LIEU/BO_TEST', 'BO_TEST']);
                 tree[folder]["TL_TU_HOC"] = tuHocDirs;
                 
-                const deThiDirs = getDirs([
-                    'DE_THI/TestCases',
-                    'DE_THI/BO_TEST'
-                ]);
-                // Đối với chế độ cũ, cần lấy tên thư mục
+                const deThiDirs = getDirs(['DE_THI/TestCases', 'DE_THI/BO_TEST']);
                 tree[folder]["DE_THI"] = deThiDirs.length > 0 ? deThiDirs : tuHocDirs;
             }
         }
