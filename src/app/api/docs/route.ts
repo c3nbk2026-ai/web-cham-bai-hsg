@@ -27,26 +27,16 @@ export async function GET() {
             }
             
             if (actualPath) {
-                // Đọc các file chung (không chia nhóm)
                 const files = fs.readdirSync(actualPath).filter(f => f.endsWith('.pdf'));
                 for (const file of files) {
-                    docsTree[week].push({ name: file, url: `/data/${week}/${foundDir}/${file}`, mode: 'ALL' });
-                }
-
-                // Đọc file Đại Trà
-                if (fs.existsSync(path.join(actualPath, 'DAI_TRA'))) {
-                    const dtFiles = fs.readdirSync(path.join(actualPath, 'DAI_TRA')).filter(f => f.endsWith('.pdf'));
-                    for (const file of dtFiles) {
-                        docsTree[week].push({ name: file, url: `/data/${week}/${foundDir}/DAI_TRA/${file}`, mode: 'DAI_TRA' });
+                    let mode = 'ALL';
+                    const lower = file.toLowerCase();
+                    if (lower.startsWith('hs-hsg')) {
+                        mode = 'DOI_TUYEN';
+                    } else if (lower.startsWith('hs-hs')) {
+                        mode = 'DAI_TRA';
                     }
-                }
-
-                // Đọc file Đội Tuyển
-                if (fs.existsSync(path.join(actualPath, 'DOI_TUYEN'))) {
-                    const dtFiles = fs.readdirSync(path.join(actualPath, 'DOI_TUYEN')).filter(f => f.endsWith('.pdf'));
-                    for (const file of dtFiles) {
-                        docsTree[week].push({ name: file, url: `/data/${week}/${foundDir}/DOI_TUYEN/${file}`, mode: 'DOI_TUYEN' });
-                    }
+                    docsTree[week].push({ name: file, url: `/data/${week}/${foundDir}/${file}`, mode });
                 }
             }
         }
