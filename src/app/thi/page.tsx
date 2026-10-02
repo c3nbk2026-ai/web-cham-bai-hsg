@@ -104,14 +104,18 @@ export default function ExamRoom() {
   }, [isExamStarted, isFinished, problem, code, stdout]);
 
   const drawExam = () => {
-      const examFolder = "NGAN_HANG_DE";
-      const problems = structure[examFolder]?.["DE_THI"] || [];
+      let allProblems: {folder: string, problem: string}[] = [];
+      Object.keys(structure).forEach(folder => {
+          if(folder.startsWith('DE_') && structure[folder]["DE_THI"]) {
+              structure[folder]["DE_THI"].forEach((p: string) => allProblems.push({folder, problem: p}));
+          }
+      });
       
-      if (problems.length === 0) return alert("Hệ thống chưa tìm thấy bài thi nào! Vui lòng copy các file PDF đề thi vào public/data/NGAN_HANG_DE/DE_THI/");
+      if (allProblems.length === 0) return alert("Hệ thống chưa tìm thấy bài thi nào! Hãy đảm bảo bạn đã lưu đề thi dưới dạng file PDF (ví dụ: DE_THI.pdf) và đặt vào thư mục data/DE_KTGK/");
       
-      const randomProblem = problems[Math.floor(Math.random() * problems.length)];
-      setProblem(randomProblem);
-      setTestFolder(examFolder);
+      const randomProblem = allProblems[Math.floor(Math.random() * allProblems.length)];
+      setProblem(randomProblem.problem);
+      setTestFolder(randomProblem.folder); // VD: DE_KTGK
       setHasDrawn(true);
   };
 
@@ -331,9 +335,9 @@ sys.stdout = io.StringIO()
                         Nội dung Đề Thi
                     </span>
                 </div>
-                {/* Lấy PDF dựa theo tên problem */}
+                {/* Lấy trực tiếp PDF từ thư mục DE_ (VD: /data/DE_KTGK/BAI1.pdf) */}
                 <iframe 
-                    src={`/data/${testFolder}/DE_THI/${problem}.pdf#toolbar=0&navpanes=0`} 
+                    src={`/data/${testFolder}/${problem}.pdf#toolbar=0&navpanes=0`} 
                     className="w-full flex-1 border-0 bg-white"
                     title="Nội dung đề thi"
                 />

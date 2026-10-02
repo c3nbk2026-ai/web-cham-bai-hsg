@@ -9,19 +9,19 @@ export async function GET() {
     try {
         if (!fs.existsSync(dataDir)) return NextResponse.json({});
         
-        // Quét các thư mục TUAN (dành cho HSG) và NGAN_HANG_DE (dành cho thi định kỳ)
-        const folders = fs.readdirSync(dataDir).filter(f => f.startsWith('TUAN') || f === 'NGAN_HANG_DE');
+        // Quét các thư mục TUAN (dành cho HSG) và các thư mục bắt đầu bằng DE_ (dành cho thi định kỳ, VD: DE_KTGK)
+        const folders = fs.readdirSync(dataDir).filter(f => f.startsWith('TUAN') || f.startsWith('DE_'));
         
         for (const folder of folders) {
             tree[folder] = { "TL_TU_HOC": [], "DE_THI": [] };
             
-            if (folder === 'NGAN_HANG_DE') {
-                // Với NGAN_HANG_DE, chỉ cần đọc trực tiếp các file PDF trong thư mục DE_THI
-                const deThiPath = path.join(dataDir, folder, 'DE_THI');
-                if (fs.existsSync(deThiPath)) {
-                    const files = fs.readdirSync(deThiPath)
+            if (folder.startsWith('DE_')) {
+                // Với thư mục đề thi (DE_KTGK), đọc trực tiếp các file PDF ngay bên trong thư mục đó
+                const folderPath = path.join(dataDir, folder);
+                if (fs.existsSync(folderPath)) {
+                    const files = fs.readdirSync(folderPath)
                         .filter(f => f.toLowerCase().endsWith('.pdf'))
-                        .map(f => f.slice(0, -4)); // Bỏ đuôi .pdf để lấy tên bài (ví dụ: BAI1)
+                        .map(f => f.slice(0, -4)); // Bỏ đuôi .pdf để lấy tên bài
                     tree[folder]["DE_THI"] = files;
                 }
             } else {
