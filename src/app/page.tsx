@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect } from "react";
 import Script from "next/script";
@@ -14,11 +14,8 @@ export default function Home() {
   const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pyodide, setPyodide] = useState<any>(null);
-  const [studentName,
-              mode, setStudentName] = useState("");
+  const [studentName, setStudentName] = useState("");
   const [students, setStudents] = useState<string[]>([]);
-  const [showTheoryModal, setShowTheoryModal] = useState(false);
-  const [theoryUrl, setTheoryUrl] = useState('');
   const [docsTree, setDocsTree] = useState<any>({});
   const [showTheoryModal, setShowTheoryModal] = useState(false);
   const [theoryUrl, setTheoryUrl] = useState('');

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 import { useState, useEffect } from "react";
 import { useMode } from "@/components/ModeContext";
 
@@ -78,7 +78,7 @@ export default function TuHocPage() {
                                 <button
                                     key={doc.url}
                                     onClick={() => setSelectedDoc(doc)}
-                                    className={\group relative bg-gradient-to-br \ rounded-3xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-left flex flex-col h-64 overflow-hidden border border-white/20\}
+                                    className={`group relative bg-gradient-to-br ${gradient} rounded-3xl p-6 shadow-lg hover:shadow-2xl hover:-translate-y-2 transition-all duration-300 text-left flex flex-col h-64 overflow-hidden border border-white/20`}
                                 >
                                     <div className="absolute -right-8 -top-8 w-32 h-32 bg-white/20 rounded-full group-hover:scale-[2] transition-transform duration-700 blur-2xl pointer-events-none"></div>
                                     
@@ -138,7 +138,7 @@ export default function TuHocPage() {
                 </div>
 
                 <iframe 
-                    src={\\#toolbar=1&navpanes=0&scrollbar=1\} 
+                    src={`${selectedDoc.url}#toolbar=1&navpanes=0&scrollbar=1`} 
                     className="w-full flex-1 border-0 bg-[#323639]"
                     title="PDF Viewer"
                 />
