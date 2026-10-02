@@ -10,6 +10,10 @@ export default function ExamRoom() {
   const [problem, setProblem] = useState(""); // Lưu tên file đầy đủ (VD: BAI1.pdf, BAI1.docx)
   const [code, setCode] = useState("# Viết code tại đây\n");
   
+  // Danh sách tất cả đề thi có sẵn trong các thư mục DE_
+  const [availableProblems, setAvailableProblems] = useState<{folder: string, name: string}[]>([]);
+  const [selectedProblemStr, setSelectedProblemStr] = useState("");
+  
   // Terminal I/O states
   const [stdin, setStdin] = useState("");
   const [stdout, setStdout] = useState("");
@@ -28,7 +32,6 @@ export default function ExamRoom() {
   const [timeLeft, setTimeLeft] = useState(45 * 60); // 45 minutes
   const [violationCount, setViolationCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
-  const [hasDrawn, setHasDrawn] = useState(false);
 
   const classes = ["10A1", "10A2", "10A3", "10A4", "10A5", "10A6", "10A7", "10A8", "10A9", "10A10"];
 
@@ -37,6 +40,17 @@ export default function ExamRoom() {
       .then((res) => res.json())
       .then((data) => {
         setStructure(data);
+        
+        let allProbs: {folder: string, name: string}[] = [];
+        Object.keys(data).forEach(folder => {
+            if(folder.startsWith('DE_') && data[folder]["DE_THI"]) {
+                data[folder]["DE_THI"].forEach((p: string) => allProbs.push({folder, name: p}));
+            }
+        });
+        setAvailableProblems(allProbs);
+        if (allProbs.length > 0) {
+            setSelectedProblemStr(`${allProbs[0].folder}|${allProbs[0].name}`);
+        }
       });
 
     fetch("/data/students.json")
@@ -103,25 +117,14 @@ export default function ExamRoom() {
     return () => clearInterval(timer);
   }, [isExamStarted, isFinished, problem, code, stdout]);
 
-  const drawExam = () => {
-      let allProblems: {folder: string, problem: string}[] = [];
-      Object.keys(structure).forEach(folder => {
-          if(folder.startsWith('DE_') && structure[folder]["DE_THI"]) {
-              structure[folder]["DE_THI"].forEach((p: string) => allProblems.push({folder, problem: p}));
-          }
-      });
-      
-      if (allProblems.length === 0) return alert("Hệ thống chưa tìm thấy bài thi nào! Hãy đảm bảo bạn đã copy file .pdf hoặc .docx vào thư mục data/DE_KTGK/");
-      
-      const randomProblem = allProblems[Math.floor(Math.random() * allProblems.length)];
-      setProblem(randomProblem.problem);
-      setTestFolder(randomProblem.folder); // VD: DE_KTGK
-      setHasDrawn(true);
-  };
 
   const startExam = () => {
     if (!studentName) return alert("Vui lòng nhập tên học sinh!");
-    if (!problem) return alert("Vui lòng bốc thăm đề thi trước!");
+    if (!selectedProblemStr) return alert("Vui lòng chọn đề thi!");
+    
+    const [f, p] = selectedProblemStr.split('|');
+    setTestFolder(f);
+    setProblem(p);
     
     try {
         document.documentElement.requestFullscreen().then(() => {
@@ -258,25 +261,27 @@ sys.stdout = io.StringIO()
                       
                       <div>
                         <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chọn Lớp</label>
-                        <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={className} onChange={e => { setClassName(e.target.value); setHasDrawn(false); }}>
+                        <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={className} onChange={e => setClassName(e.target.value)}>
                             {classes.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                       </div>
 
-                      {!hasDrawn ? (
-                          <button onClick={drawExam} className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-amber-500/30 transition-transform active:scale-95 text-lg flex justify-center items-center gap-2">
-                              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-                              BỐC THĂM ĐỀ THI
-                          </button>
-                      ) : (
-                          <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl mt-4 text-center">
-                              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Đề thi của bạn:</div>
-                              <div className="text-xl font-black text-emerald-700">{problem}</div>
-                              <button onClick={startExam} className="w-full mt-4 bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-600/30 transition-transform active:scale-95 text-lg">
-                                  VÀO PHÒNG THI
-                              </button>
-                          </div>
-                      )}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chọn Đề Thi</label>
+                        {availableProblems.length === 0 ? (
+                            <div className="p-3 bg-rose-50 text-rose-600 rounded-xl text-sm italic border border-rose-200">
+                                Chưa có đề thi nào. Giáo viên cần copy các file đề (.pdf hoặc .docx) vào thư mục data/DE_KTGK/
+                            </div>
+                        ) : (
+                            <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-emerald-700" value={selectedProblemStr} onChange={e => setSelectedProblemStr(e.target.value)}>
+                                {availableProblems.map(p => <option key={p.name} value={`${p.folder}|${p.name}`}>{p.name.replace(/\.[^/.]+$/, "")}</option>)}
+                            </select>
+                        )}
+                      </div>
+
+                      <button onClick={startExam} disabled={availableProblems.length === 0} className="w-full mt-4 bg-rose-600 hover:bg-rose-700 disabled:opacity-50 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-600/30 transition-transform active:scale-95 text-lg">
+                          VÀO PHÒNG THI
+                      </button>
                   </div>
               </div>
           </div>
