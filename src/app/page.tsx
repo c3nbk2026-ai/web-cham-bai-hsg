@@ -40,11 +40,22 @@ export default function Home() {
       .then(data => setDocsTree(data))
       .catch(() => console.log("Không thể tải tài liệu lý thuyết"));
 
-    fetch("/data/students.json")
+    fetch("/api/students?t=" + Date.now())
       .then(res => res.json())
       .then(data => {
-          setStudents(data);
-          if (data.length > 0) setStudentName(data[0]);
+        if (data.error) {
+            setStudentsData({"LỖI CẤP QUYỀN": ["Chưa Share file sheet cho Bot"]});
+            setStudentClass("LỖI CẤP QUYỀN");
+            return;
+        }
+        setStudentsData(data);
+        const classes = Object.keys(data).sort();
+        if (classes.length > 0) {
+          setStudentClass(classes[0]);
+          if (data[classes[0]].length > 0) {
+            setStudentName(data[classes[0]][0]);
+          }
+        }
       })
       .catch(() => console.log("Không tìm thấy file danh sách học sinh"));
   }, []);
@@ -262,7 +273,7 @@ sys.stdout = io.StringIO()
                         {studentsData[studentClass].map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     ) : (
-                      <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-semibold shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Nh?p t�n..." />
+                      <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-semibold shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Nhập tên..." />
                     )}
                   </div>
                 </div>

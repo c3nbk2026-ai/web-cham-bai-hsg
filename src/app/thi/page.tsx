@@ -39,9 +39,16 @@ export default function ExamRoom() {
 
   useEffect(() => {
     fetch("/api/tests").then(r => r.json()).then(setStructure);
-    fetch("/api/students")
+    fetch("/api/students?t=" + Date.now())
       .then(res => res.json())
       .then(data => {
+        if (data.error) {
+            console.error("Lỗi từ Google Sheets:", data.error);
+            setStudentsData({"LỖI: Chưa cấp quyền": ["Vui l�ng Share file cho email Bot"]});
+            setStudentClass("LỖI: Chưa cấp quyền");
+            setStudentName("Vui l�ng Share file cho email Bot");
+            return;
+        }
         setStudentsData(data);
         const classes = Object.keys(data).sort();
         if (classes.length > 0) {
