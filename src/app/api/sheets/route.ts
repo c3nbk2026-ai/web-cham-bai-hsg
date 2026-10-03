@@ -76,9 +76,7 @@ export async function POST(req: Request) {
             score = numScore.toString();
         }
 
-        if (OLD_SPREADSHEET_ID === "YOUR_SPREADSHEET_ID_HERE") {
-            return NextResponse.json({ success: true, demo: true });
-        }
+        
 
         let auth;
         if (process.env.GOOGLE_CREDENTIALS) {
@@ -108,6 +106,10 @@ export async function POST(req: Request) {
         } else if (mode === 'DE_THI') {
             targetSpreadsheetId = NEW_SPREADSHEET_ID;
             targetRange = 'KetQua!A:K';
+        }
+
+        if (targetSpreadsheetId === "YOUR_SPREADSHEET_ID_HERE") {
+            return NextResponse.json({ success: true, demo: true });
         }
 
         await sheets.spreadsheets.values.append({
