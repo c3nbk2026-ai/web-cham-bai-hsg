@@ -220,45 +220,47 @@ export default function ExamRoom() {
         <h1 className="text-2xl font-black text-slate-800 mb-2">Phong Thi Khep Kin</h1>
         <p className="text-slate-500 text-center text-sm font-medium mb-8">Moi hanh vi thoat toan man hinh hoac chuyen ung dung deu bi ghi lai va tru diem.</p>
         <div className="w-full space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Ten cua ban</label>
-            {isStudentLocked ? (
-              <div className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-xl font-bold text-indigo-700 flex items-center justify-between">
-                <span>{studentName}</span>
-                <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-              </div>
-            ) : (
-              <div className="flex gap-4 w-full">
-                  <div className="w-1/3">
-                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentClass} onChange={(e) => {
-                      const newClass = e.target.value;
-                      setStudentClass(newClass);
-                      if (studentsData[newClass] && studentsData[newClass].length > 0) {
-                        setStudentName(studentsData[newClass][0]);
-                      } else {
-                        setStudentName("");
-                      }
-                    }}>
-                      {Object.keys(studentsData).sort().map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
-                  <div className="w-2/3">
-                    {studentClass && studentsData[studentClass] && studentsData[studentClass].length > 0 ? (
-                      <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)}>
-                        {studentsData[studentClass].map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                    ) : (
-                      <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-semibold shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Nh?p t�n..." />
-                    )}
-                  </div>
+          <div className="flex gap-4 w-full">
+            <div className="w-1/3">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">CHỌN LỚP</label>
+              {isStudentLocked ? (
+                <div className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-xl font-bold text-indigo-700 flex items-center justify-between opacity-70">
+                  <span>{className}</span>
                 </div>
-            )}
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Chon Lop</label>
-            <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-700" value={className} onChange={e => { setClassName(e.target.value); setHasDrawn(false); }}>
-              {classes.map(c => <option key={c} value={c}>{c}</option>)}
-            </select>
+              ) : (
+                <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={className} onChange={(e) => {
+                  const newClass = e.target.value;
+                  setClassName(newClass);
+                  setHasDrawn(false);
+                  if (studentsData[newClass] && studentsData[newClass].length > 0) {
+                    setStudentName(studentsData[newClass][0]);
+                  } else {
+                    setStudentName("");
+                  }
+                }}>
+                  {Object.keys(studentsData).sort().map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              )}
+            </div>
+            <div className="w-2/3">
+              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">HỌC SINH</label>
+              {isStudentLocked ? (
+                <div className="w-full p-3 bg-indigo-50 border border-indigo-200 rounded-xl font-bold text-indigo-700 flex items-center justify-between">
+                  <span>{studentName}</span>
+                  <svg className="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+              ) : (
+                <>
+                  {className && studentsData[className] && studentsData[className].length > 0 ? (
+                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)}>
+                      {studentsData[className].map(s => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                  ) : (
+                    <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-semibold shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Nhập tên..." />
+                  )}
+                </>
+              )}
+            </div>
           </div>
           {!hasDrawn ? (
             <button onClick={drawExam} className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-amber-500/30 transition-transform active:scale-95 text-lg flex justify-center items-center gap-2">
