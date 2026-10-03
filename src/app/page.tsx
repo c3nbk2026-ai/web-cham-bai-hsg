@@ -139,7 +139,9 @@ sys.stdout = io.StringIO()
                 actualOut = await py.runPythonAsync("sys.stdout.getvalue().strip()");
             }
             
-            const normalize = (s: string) => (s || "").replace(/\r/g, "").split("\n").map(l => l.trimEnd()).join("\n").trim();
+            // So sánh theo token (tách bởi bất kỳ khoảng trắng nào) — chuẩn competitive programming
+            // "4 2" và "4\n2" đều cho ra ["4","2"] → tính đúng
+            const normalize = (s: string) => (s || "").trim().replace(/\r/g, "").split(/\s+/).filter(t => t.length > 0).join(" ");
             
             if (normalize(actualOut) === normalize(t.out)) {
                 testResults.push({ name: t.name, status: "ĐÚNG", css: "bg-emerald-50 border-emerald-200 text-emerald-700" });
