@@ -151,7 +151,11 @@ export default function ExamRoom() {
         if (py) {
           for (const t of testCases) {
             try {
-              py.globals.set("test_input_data", t.inp);
+              let smartInp = t.inp;
+              if (!code.includes('split(') && !code.includes('split()') && !code.includes('sys.stdin.read')) {
+                  smartInp = (t.inp || "").trim().replace(/[ \t]+/g, '\n');
+              }
+              py.globals.set("test_input_data", smartInp);
               py.globals.set("student_code", code);
               await py.runPythonAsync("import sys, io\nsys.stdin = io.StringIO(test_input_data)\nsys.stdout = io.StringIO()");
               await py.runPythonAsync("try:\n    exec(student_code, {})\nexcept:\n    pass");

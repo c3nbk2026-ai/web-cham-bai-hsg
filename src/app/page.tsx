@@ -25,7 +25,7 @@ export default function Home() {
       .then((res) => res.json())
       .then((data) => {
         setStructure(data);
-        const weeks = Object.keys(data);
+        const weeks = Object.keys(data).filter(w => w !== 'DE_KTGK');
         if (weeks.length > 0) {
           setWeek(weeks[0]);
         }
@@ -107,7 +107,11 @@ export default function Home() {
         const pName = problem.replace("TEST_", "");
         
         try {
-            py.globals.set("test_input_data", t.inp);
+            let smartInp = t.inp;
+        if (mode === 'DAI_TRA' && !code.includes('split(') && !code.includes('split()') && !code.includes('sys.stdin.read')) {
+            smartInp = (t.inp || "").trim().replace(/[ \t]+/g, '\n');
+        }
+        py.globals.set("test_input_data", smartInp);
             await py.runPythonAsync(`
 import sys
 import io
@@ -115,8 +119,8 @@ sys.stdin = io.StringIO(test_input_data)
 sys.stdout = io.StringIO()
             `);
             
-            try { py.FS.writeFile(pName + ".INP", t.inp); } catch(e) {}
-            try { py.FS.writeFile(pName + ".inp", t.inp); } catch(e) {}
+            try { py.FS.writeFile(pName + ".INP", smartInp); } catch(e) {}
+            try { py.FS.writeFile(pName + ".inp", smartInp); } catch(e) {}
             try { py.FS.writeFile(pName + ".OUT", ""); } catch(e) {}
             try { py.FS.writeFile(pName + ".out", ""); } catch(e) {}
 
@@ -247,7 +251,7 @@ sys.stdout = io.StringIO()
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tuần</label>
                   <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-slate-700 font-semibold cursor-pointer shadow-sm" value={week} onChange={(e) => setWeek(e.target.value)}>
-                    {Object.keys(structure).map((w) => (
+                    {Object.keys(structure).filter(w => w !== 'DE_KTGK').map((w) => (
                       <option key={w} value={w}>{w}</option>
                     ))}
                   </select>
