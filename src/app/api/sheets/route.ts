@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
-const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID || "YOUR_SPREADSHEET_ID_HERE";
+const SPREADSHEET_ID = "1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 async function askGemini(code, problem, maxScore) {
@@ -99,9 +99,8 @@ export async function POST(req: Request) {
         const soTestSai = Math.max(0, numMaxScore - originalScore);
         const diem = numMaxScore > 0 ? ((numScore / numMaxScore) * 10).toFixed(1) : "0.0";
 
-        let targetRange = 'BangDiem_DaiTra!A:K';
-        if (mode === 'DOI_TUYEN') targetRange = 'BangDiem_DoiTuyen!A:K';
-        else if (mode === 'DE_THI') targetRange = 'BangDiem_KiemTra!A:K';
+        // Ghi t?t c? k?t qu? v�o tab KetQua c?a file m?i
+        let targetRange = 'KetQua!A:K';
 
         await sheets.spreadsheets.values.append({
             spreadsheetId: SPREADSHEET_ID,
