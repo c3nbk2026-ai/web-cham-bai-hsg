@@ -329,12 +329,22 @@ sys.stdout = io.StringIO()
             </div>
 
             {/* Code Editor (Giữ giao diện tối mờ cho giống VS Code) */}
-            <textarea 
-              className="w-full h-80 p-6 bg-slate-900 text-cyan-300 font-mono text-[15px] focus:outline-none resize-none leading-relaxed" 
-              spellCheck="false"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
+            <div className="h-96 w-full relative">
+              <Editor
+                height="100%"
+                defaultLanguage="python"
+                theme="vs-dark"
+                value={code}
+                onChange={(val) => setCode(val || "")}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 15,
+                  wordWrap: 'on',
+                  scrollBeyondLastLine: false,
+                  padding: { top: 16 }
+                }}
+              />
+            </div>
           </div>
 
           {/* Bảng kết quả chia 2 cột */}

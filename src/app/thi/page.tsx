@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Editor from "@monaco-editor/react";
 import Script from "next/script";
 
 // Kiểu dữ liệu đề thi từ API
@@ -303,7 +304,21 @@ export default function ExamRoom() {
           <div className="flex flex-col gap-4 min-h-0">
             <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Trinh soan thao Python (Pyodide)</div>
-              <textarea className="w-full flex-1 p-6 bg-[#1e1e1e] text-cyan-300 font-mono text-[16px] focus:outline-none resize-none leading-relaxed" spellCheck={false} value={code} onChange={e => setCode(e.target.value)} disabled={isFinished} />
+              <Editor
+                  height="100%"
+                  defaultLanguage="python"
+                  theme="vs-dark"
+                  value={code}
+                  onChange={(val) => setCode(val || "")}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 16,
+                    wordWrap: 'on',
+                    readOnly: isFinished,
+                    scrollBeyondLastLine: false,
+                    padding: { top: 16 }
+                  }}
+                />
             </div>
             <div className="flex-[2] flex gap-4 min-h-0">
               <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
