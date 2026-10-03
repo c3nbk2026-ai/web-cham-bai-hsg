@@ -76,7 +76,7 @@ export async function POST(req: Request) {
             score = numScore.toString();
         }
 
-        if (SPREADSHEET_ID === "YOUR_SPREADSHEET_ID_HERE") {
+        if (OLD_SPREADSHEET_ID === "YOUR_SPREADSHEET_ID_HERE") {
             return NextResponse.json({ success: true, demo: true });
         }
 
