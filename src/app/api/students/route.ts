@@ -4,6 +4,8 @@ import path from 'path';
 
 const SPREADSHEET_ID = "1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
     try {
         let auth;

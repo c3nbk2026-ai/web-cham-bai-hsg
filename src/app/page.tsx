@@ -242,7 +242,7 @@ sys.stdout = io.StringIO()
             <div className="space-y-5">
               <div className="flex gap-4">
                   <div className="w-1/3">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">L?p</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Lớp</label>
                     <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentClass} onChange={(e) => {
                       const newClass = e.target.value;
                       setStudentClass(newClass);
@@ -256,7 +256,7 @@ sys.stdout = io.StringIO()
                     </select>
                   </div>
                   <div className="w-2/3">
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">H?c Sinh</label>
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Học Sinh</label>
                     {studentClass && studentsData[studentClass] && studentsData[studentClass].length > 0 ? (
                       <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)}>
                         {studentsData[studentClass].map(s => <option key={s} value={s}>{s}</option>)}
