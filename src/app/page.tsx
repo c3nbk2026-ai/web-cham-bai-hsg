@@ -17,8 +17,9 @@ export default function Home() {
   const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [pyodide, setPyodide] = useState<any>(null);
+  const [studentClass, setStudentClass] = useState("");
   const [studentName, setStudentName] = useState("");
-  const [students, setStudents] = useState<string[]>([]);
+  const [studentsData, setStudentsData] = useState<Record<string, string[]>>({});
   const [docsTree, setDocsTree] = useState<any>({});
   const [showTheoryModal, setShowTheoryModal] = useState(false);
   const [theoryUrl, setTheoryUrl] = useState('');
@@ -239,16 +240,32 @@ sys.stdout = io.StringIO()
             </div>
             
             <div className="space-y-5">
-              <div>
-                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tên Học Sinh</label>
-                  {students.length > 0 ? (
-                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)}>
-                      {students.map(s => <option key={s} value={s}>{s}</option>)}
+              <div className="flex gap-4">
+                  <div className="w-1/3">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">L?p</label>
+                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentClass} onChange={(e) => {
+                      const newClass = e.target.value;
+                      setStudentClass(newClass);
+                      if (studentsData[newClass] && studentsData[newClass].length > 0) {
+                        setStudentName(studentsData[newClass][0]);
+                      } else {
+                        setStudentName("");
+                      }
+                    }}>
+                      {Object.keys(studentsData).sort().map(c => <option key={c} value={c}>{c}</option>)}
                     </select>
-                  ) : (
-                    <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-semibold transition-all shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Nhập tên..." />
-                  )}
-              </div>
+                  </div>
+                  <div className="w-2/3">
+                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">H?c Sinh</label>
+                    {studentClass && studentsData[studentClass] && studentsData[studentClass].length > 0 ? (
+                      <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)}>
+                        {studentsData[studentClass].map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    ) : (
+                      <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-semibold shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Nh?p t�n..." />
+                    )}
+                  </div>
+                </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
