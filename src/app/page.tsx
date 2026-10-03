@@ -1,6 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import dynamic from "next/dynamic";
+const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
+
 import Script from "next/script";
 import { useMode } from "@/components/ModeContext";
 

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import Editor from "@monaco-editor/react";
+import dynamic from "next/dynamic";
+const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
+
 import Script from "next/script";
 
 // Kiểu dữ liệu đề thi từ API
