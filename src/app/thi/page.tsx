@@ -44,9 +44,9 @@ export default function ExamRoom() {
       .then(data => {
         if (data.error) {
             console.error("Lỗi từ Google Sheets:", data.error);
-            setStudentsData({"LỖI: Chưa cấp quyền": ["Vui l�ng Share file cho email Bot"]});
+            setStudentsData({"LỖI: Chưa cấp quyền": ["Vui lòng Share file cho email Bot"]});
             setStudentClass("LỖI: Chưa cấp quyền");
-            setStudentName("Vui l�ng Share file cho email Bot");
+            setStudentName("Vui lòng Share file cho email Bot");
             return;
         }
         setStudentsData(data);
@@ -58,7 +58,7 @@ export default function ExamRoom() {
           }
         }
       })
-      .catch(() => console.log("L?i t?i danh s�ch h?c sinh"));
+      .catch(() => console.log("Lỗi tải danh sách học sinh"));
     const params = new URLSearchParams(window.location.search);
     const studentParam = params.get('student');
     if (studentParam) { setStudentName(studentParam); setIsStudentLocked(true); }
@@ -143,7 +143,7 @@ export default function ExamRoom() {
 
   const submitCode = async (isAutoSubmit = false) => {
     if (!examItem) return;
-    if (!isAutoSubmit && !confirm("Ban co chac chan muon nop bai? He thong se tu dong cham diem va ban KHONG THE sua lai!")) return;
+    if (!isAutoSubmit && !confirm("Bạn có chắc chắn muốn nộp bài? Hệ thống sẽ tự động chấm điểm và bạn KHÔNG THỂ sửa lại!")) return;
     setIsSubmitting(true); setIsFinished(true);
 
     const { deFolderName, problemName } = examItem;
@@ -324,7 +324,7 @@ export default function ExamRoom() {
         <div className="bg-slate-800 rounded-2xl p-4 flex justify-between items-center border border-slate-700 shadow-xl shrink-0">
           <div className="flex items-center gap-4">
             <div className="px-4 py-2 bg-indigo-500/20 text-indigo-300 font-bold rounded-xl border border-indigo-500/30">{studentName} - {className}</div>
-            <div className="px-4 py-2 bg-slate-700/50 text-slate-300 font-bold font-mono rounded-xl border border-slate-600">Bai: {examItem?.problemName}</div>
+            <div className="px-4 py-2 bg-slate-700/50 text-slate-300 font-bold font-mono rounded-xl border border-slate-600">Bài: {examItem?.problemName}</div>
             {violationCount > 0 && (
               <div className="px-4 py-2 bg-rose-500/20 text-rose-400 font-bold rounded-xl border border-rose-500/30 flex items-center gap-2">
                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
@@ -336,10 +336,10 @@ export default function ExamRoom() {
             <div className={"text-3xl font-mono font-black mr-4 " + (timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400')}>{formatTime(timeLeft)}</div>
             <button onClick={runCode} disabled={isLoading || isFinished} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-900 transition-all disabled:opacity-50">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-              {isLoading ? 'DANG CHAY...' : 'CHAY CODE'}
+              {isLoading ? 'Đang chạy...' : 'CHẠY CODE'}
             </button>
             <button onClick={() => submitCode(false)} disabled={isSubmitting || isFinished} className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-rose-900 transition-all disabled:opacity-50">
-              {isSubmitting ? 'DANG CHAM...' : (isFinished ? 'DA NOP BAI' : 'NOP BAI')}
+              {isSubmitting ? 'Đang chấm...' : (isFinished ? 'Đã nộp bài' : 'NỘP BÀI')}
             </button>
           </div>
         </div>
@@ -347,7 +347,7 @@ export default function ExamRoom() {
           <div className="bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 z-10 relative">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-              Noi dung De Thi — {examItem?.problemName}
+              Nội dung Đề Thi — {examItem?.problemName}
             </div>
             <div className="w-full flex-1 relative overflow-hidden bg-white">
               {/* Hack: Mở rộng iframe ra 124% và dịch sang trái 12% để cắt bỏ lề giấy trắng 2 bên, ép chữ to lên */}
@@ -380,7 +380,7 @@ export default function ExamRoom() {
               </div>
               <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
                 <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400">Ket qua xuat (STDOUT)</div>
-                <textarea className={"w-full flex-1 p-4 font-mono text-sm focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Ket qua se hien thi o day sau khi bam Chay Code..." value={stdout} />
+                <textarea className={"w-full flex-1 p-4 font-mono text-sm focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Kết quả sẽ hiển thị ở đây sau khi bấm Chạy Code..." value={stdout} />
               </div>
             </div>
           </div>
