@@ -1,0 +1,29 @@
+const fs = require('fs');
+let thi = fs.readFileSync('src/app/thi/page.tsx', 'utf8');
+
+const regex = /const drawExam = \(\) => \{[\s\S]*?setHasDrawn\(true\);\s*\};/;
+
+const newDrawExam = `const drawExam = () => {
+    let all: {folder: string, item: ExamItem}[] = [];
+    const requiredTopic = examConfig["Ch\u1EE7 \u0111\u1EC1"];
+    
+    Object.keys(structure).forEach(folder => {
+      let isMatch = false;
+      if (requiredTopic) {
+         isMatch = folder.includes(requiredTopic);
+      } else {
+         isMatch = folder.startsWith('DE_');
+      }
+      
+      if (isMatch && Array.isArray(structure[folder]["DE_THI"])) {
+        structure[folder]["DE_THI"].forEach((item: ExamItem) => all.push({folder, item}));
+      }
+    });
+    
+    if (all.length === 0) return alert(\`Kh\u00F4ng t\u00ECm th\u1EA5y b\u00E0i thi n\u00E0o \${requiredTopic ? 'cho ch\u1EE7 \u0111\u1EC1 ' + requiredTopic : ''}!\`);
+    const r = all[Math.floor(Math.random() * all.length)];
+    setExamItem(r.item); setTestFolder(r.folder); setHasDrawn(true);
+  };`;
+
+thi = thi.replace(regex, newDrawExam);
+fs.writeFileSync('src/app/thi/page.tsx', thi, 'utf8');

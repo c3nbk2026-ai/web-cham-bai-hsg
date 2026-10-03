@@ -34,6 +34,43 @@ export default function ExamRoom() {
   const [violationCount, setViolationCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
+  
+  // Security Layer States
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [roomCodeInput, setRoomCodeInput] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isCheckingCode, setIsCheckingCode] = useState(false);
+  const [examConfig, setExamConfig] = useState<any>({});
+
+  const handleAuth = async () => {
+    if (!roomCodeInput) return setAuthError("Vui lòng nhập Mã Phòng Thi!");
+    setIsCheckingCode(true);
+    setAuthError("");
+    try {
+        const res = await fetch("/api/exam-config?t=" + Date.now());
+        const data = await res.json();
+        if (data.error) {
+            setAuthError("Lỗi: " + data.error);
+        } else {
+            if (data["MaPhongThi"] === roomCodeInput) {
+                setExamConfig(data);
+                if (data["ThoiGianThi"]) {
+                    setTimeLeft(parseInt(data["ThoiGianThi"]) * 60);
+                }
+                if (data["LopDangThi"]) {
+                    setClassName(data["LopDangThi"]);
+                }
+                setIsAuthorized(true);
+            } else {
+                setAuthError("Mã Phòng Thi không đúng!");
+            }
+        }
+    } catch(e) {
+        setAuthError("Lỗi kết nối máy chủ!");
+    }
+    setIsCheckingCode(false);
+  };
+
 
   const classes = ["10A1","10A2","10A3","10A4","10A5","10A6","10A7","10A8","10A9","10A10"];
 
@@ -96,12 +133,22 @@ export default function ExamRoom() {
 
   const drawExam = () => {
     let all: {folder: string, item: ExamItem}[] = [];
+    const requiredTopic = examConfig["Chủ đề"];
+    
     Object.keys(structure).forEach(folder => {
-      if (folder.startsWith('DE_') && Array.isArray(structure[folder]["DE_THI"])) {
+      let isMatch = false;
+      if (requiredTopic) {
+         isMatch = folder.includes(requiredTopic);
+      } else {
+         isMatch = folder.startsWith('DE_');
+      }
+      
+      if (isMatch && Array.isArray(structure[folder]["DE_THI"])) {
         structure[folder]["DE_THI"].forEach((item: ExamItem) => all.push({folder, item}));
       }
     });
-    if (all.length === 0) return alert("Chua tim thay bai thi nao!");
+    
+    if (all.length === 0) return alert(`Không tìm thấy bài thi nào ${requiredTopic ? 'cho chủ đề ' + requiredTopic : ''}!`);
     const r = all[Math.floor(Math.random() * all.length)];
     setExamItem(r.item); setTestFolder(r.folder); setHasDrawn(true);
   };
@@ -236,6 +283,42 @@ export default function ExamRoom() {
   };
 
   const formatTime = (s: number) => Math.floor(s/60).toString().padStart(2,'0') + ':' + (s%60).toString().padStart(2,'0');
+
+  if (!isAuthorized) {
+    return (
+      <div className="min-h-screen bg-slate-900 text-slate-100 font-sans flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-slate-800 rounded-3xl p-8 border border-slate-700 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-rose-500 via-indigo-500 to-emerald-500"></div>
+          <div className="w-20 h-20 bg-indigo-500/20 rounded-full flex items-center justify-center mx-auto mb-6 border border-indigo-500/30">
+            <svg className="w-10 h-10 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+          </div>
+          <h2 className="text-3xl font-black text-center mb-2 tracking-tight text-white">LỚP BẢO MẬT</h2>
+          <p className="text-slate-400 text-center mb-8">Vui lòng nhập Mã Phòng Thi do giáo viên cung cấp để truy cập.</p>
+          
+          <div className="space-y-4">
+            <input 
+              type="text" 
+              placeholder="Nhập mã phòng thi..." 
+              value={roomCodeInput}
+              onChange={e => setRoomCodeInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && handleAuth()}
+              className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-4 text-center text-2xl font-black tracking-widest text-indigo-400 focus:outline-none focus:border-indigo-500 uppercase shadow-inner"
+            />
+            
+            {authError && <div className="text-rose-400 text-sm font-bold text-center bg-rose-500/10 py-2 rounded-lg border border-rose-500/20">{authError}</div>}
+            
+            <button 
+              onClick={handleAuth}
+              disabled={isCheckingCode}
+              className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-indigo-500/20 transition-transform active:scale-95"
+            >
+              {isCheckingCode ? "ĐANG KIỂM TRA..." : "XÁC NHẬN VÀO PHÒNG"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isExamStarted) return (
     <div className="min-h-screen bg-slate-900 flex items-center justify-center p-4 relative z-[99999]">
