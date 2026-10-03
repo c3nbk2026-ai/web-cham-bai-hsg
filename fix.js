@@ -1,9 +1,5 @@
 const fs = require('fs');
-let c = fs.readFileSync('src/app/thi/page.tsx', 'utf8');
-
-c = c.replace(
-    /src=\{\\`\/data\/\$\\{testFolder\\}\/DE_THI\/\$\\{problem\.replace\("TEST_", ""\)\}\.pdf#toolbar=0&navpanes=0\\`\}/g,
-    "src={`/data/${testFolder}/DE_THI/${problem.replace('TEST_', '')}.pdf#toolbar=0&navpanes=0`}"
-);
-
-fs.writeFileSync('src/app/thi/page.tsx', c);
+let content = fs.readFileSync('src/app/layout.tsx', 'utf8');
+content = content.replace(/title: ".*?",/, 'title: "ProCoder VIP - N?n T?ng Thi Ðua HSG",');
+content = content.replace(/description: ".*?",/, 'description: "N?n t?ng thi dua HSG môn Tin h?c",');
+fs.writeFileSync('src/app/layout.tsx', content, 'utf8');

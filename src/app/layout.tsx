@@ -10,8 +10,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "ProCoder VIP - Ná»n Táº£ng Thi Äua HSG",
-  description: "Ná»n táº£ng thi Ä‘ua HSG mÃ´n Tin há»c",
+  title: "ProCoder VIP - Nền Tảng Thi Đua HSG",
+  description: "Nền tảng thi đua HSG môn Tin học",
 };
 
 export default function RootLayout({
