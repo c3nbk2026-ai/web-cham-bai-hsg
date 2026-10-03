@@ -39,10 +39,19 @@ export default function ExamRoom() {
 
   useEffect(() => {
     fetch("/api/tests").then(r => r.json()).then(setStructure);
-    fetch("/data/students.json").then(r => r.json()).then(data => {
-      setStudents(data);
-      if (data.length > 0) setStudentName(data[0]);
-    }).catch(() => {});
+    fetch("/api/students")
+      .then(res => res.json())
+      .then(data => {
+        setStudentsData(data);
+        const classes = Object.keys(data).sort();
+        if (classes.length > 0) {
+          setClassName(classes[0]);
+          if (data[classes[0]].length > 0) {
+            setStudentName(data[classes[0]][0]);
+          }
+        }
+      })
+      .catch(() => console.log("L?i t?i danh s�ch h?c sinh"));
     const params = new URLSearchParams(window.location.search);
     const studentParam = params.get('student');
     if (studentParam) { setStudentName(studentParam); setIsStudentLocked(true); }
