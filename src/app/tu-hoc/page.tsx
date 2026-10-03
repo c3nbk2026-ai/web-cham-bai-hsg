@@ -78,6 +78,7 @@ export default function TuHocPage() {
     };
 
     const filteredDocsTree: any = {};
+    const allFlatDocs: any[] = [];
     let totalDocs = 0;
     let completedCount = 0;
 
@@ -85,6 +86,9 @@ export default function TuHocPage() {
         const filtered = docsTree[week].filter((doc: any) => !doc.mode || doc.mode === 'ALL' || doc.mode === mode);
         if (filtered.length > 0) {
             filteredDocsTree[week] = filtered;
+            filtered.forEach((d: any) => {
+                allFlatDocs.push({ ...d, weekName: week });
+            });
             totalDocs += filtered.length;
             completedCount += filtered.filter((d:any) => completedDocs.includes(d.url)).length;
         }
@@ -202,7 +206,7 @@ export default function TuHocPage() {
 
     // RENDER MAIN DASHBOARD
     return (
-        <div className="w-full max-w-[1400px] mx-auto p-4 md:p-8 min-h-[calc(100vh-64px)] relative z-10">
+        <div className="w-full max-w-[1800px] mx-auto p-4 md:p-8 min-h-[calc(100vh-64px)] relative z-10">
             {/* Header & Progress */}
             <div className="mb-10 text-center space-y-6">
                 <div className="inline-flex items-center justify-center p-1.5 bg-white/60 backdrop-blur-md rounded-full shadow-sm border border-white">
@@ -251,24 +255,14 @@ export default function TuHocPage() {
                     <p className="text-slate-500 font-bold text-lg">Chưa có tài liệu nào cho chế độ này!</p>
                 </div>
             ) : (
-                <div className="space-y-12 pb-20">
-                    {Object.keys(filteredDocsTree).sort().map((week, wIdx) => (
-                        <div key={week} className="animate-in fade-in slide-in-from-bottom-8 duration-700 fill-mode-both" style={{ animationDelay: `${wIdx * 150}ms` }}>
-                            <div className="flex items-center gap-4 mb-6">
-                                <div className="bg-white px-4 py-2 rounded-xl shadow-sm border border-slate-200">
-                                    <h2 className="text-xl font-black text-slate-700 bg-clip-text text-transparent bg-gradient-to-r from-slate-700 to-slate-500">{week}</h2>
-                                </div>
-                                <div className="flex-1 h-px bg-gradient-to-r from-slate-300 to-transparent"></div>
-                            </div>
-                            
-                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                {filteredDocsTree[week].map((doc: any, dIdx: number) => {
-                                    const gradient = gradients[(wIdx * 3 + dIdx) % gradients.length];
-                                    const cleanName = doc.name.replace(/^hs-hsg[-_ ]?/i, '').replace(/^hs-hs[-_ ]?/i, '').replace('.pdf', '').replace(/_/g, ' ');
-                                    const isCompleted = completedDocs.includes(doc.url);
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-20">
+                    {allFlatDocs.map((doc: any, idx: number) => {
+                        const gradient = gradients[idx % gradients.length];
+                        const cleanName = doc.name.replace(/^hs-hsg[-_ ]?/i, '').replace(/^hs-hs[-_ ]?/i, '').replace('.pdf', '').replace(/_/g, ' ');
+                        const isCompleted = completedDocs.includes(doc.url);
 
-                                    return (
-                                        <div key={dIdx} className="group relative bg-white rounded-3xl p-2 shadow-md hover:shadow-2xl transition-all duration-300 border border-slate-100 hover:border-indigo-100 flex flex-col hover:-translate-y-1">
+                        return (
+                                        <div key={idx} className="group relative bg-white rounded-3xl p-2 shadow-md hover:shadow-2xl transition-all duration-300 border border-slate-100 hover:border-indigo-100 flex flex-col hover:-translate-y-1">
                                             {isCompleted && (
                                                 <div className="absolute -top-3 -right-3 z-20 bg-gradient-to-br from-emerald-400 to-emerald-600 text-white w-9 h-9 rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/40 animate-in zoom-in border-2 border-white">
                                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
@@ -282,8 +276,8 @@ export default function TuHocPage() {
                                                     <div className="w-12 h-12 bg-white/20 backdrop-blur-md text-white rounded-2xl flex items-center justify-center shadow-sm border border-white/30 group-hover:bg-white group-hover:text-slate-800 transition-colors duration-300">
                                                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
                                                     </div>
-                                                    <div className="bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-[10px] font-black border border-white/30 uppercase tracking-widest shadow-sm">
-                                                        PDF
+                                                    <div className="bg-white/20 backdrop-blur-sm text-white px-3 py-1 rounded-full text-[10px] font-black border border-white/30 uppercase tracking-widest shadow-sm flex items-center gap-1">
+                                                        <span>{doc.weekName}</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -314,9 +308,6 @@ export default function TuHocPage() {
                                         </div>
                                     );
                                 })}
-                            </div>
-                        </div>
-                    ))}
                 </div>
             )}
             
