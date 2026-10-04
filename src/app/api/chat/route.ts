@@ -8,19 +8,41 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: "Hệ thống chưa cấu hình AI (Thiếu API Key)." }, { status: 500 });
         }
         const body = await req.json();
-        const { message, documentName, history } = body;
+        const { message, documentName, history, attachment } = body;
 
         const systemInstruction = `Bạn là một giáo viên chuyên bồi dưỡng Học sinh giỏi môn Tin học (C++, Python). Học sinh đang tự học tài liệu có tên: "${documentName}". Hãy giải đáp các thắc mắc của học sinh một cách dễ hiểu, sư phạm, và ngắn gọn. Khuyến khích học sinh suy nghĩ thay vì đưa code giải sẵn ngay lập tức. Dùng ngôn ngữ thân thiện, xưng thầy/cô và gọi học sinh là em.`;
 
-        // Chuyển đổi history sang định dạng Gemini
-        const contents = history.map((msg: any) => ({
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }]
-        }));
+        const contents = history.map((msg: any) => {
+            const parts: any[] = [];
+            if (msg.attachment) {
+                parts.push({
+                    inlineData: {
+                        mimeType: msg.attachment.mimeType,
+                        data: msg.attachment.data
+                    }
+                });
+            }
+            if (msg.text) parts.push({ text: msg.text });
+            return {
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: parts
+            };
+        });
+
+        const userParts: any[] = [];
+        if (attachment) {
+            userParts.push({
+                inlineData: {
+                    mimeType: attachment.mimeType,
+                    data: attachment.data
+                }
+            });
+        }
+        if (message) userParts.push({ text: message });
 
         contents.push({
             role: 'user',
-            parts: [{ text: message }]
+            parts: userParts
         });
 
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=" + GEMINI_API_KEY.trim(), {
