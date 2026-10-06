@@ -2,6 +2,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useMode } from "@/components/ModeContext";
 import ReactMarkdown from "react-markdown";
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css';
 
 export default function TuHocPage() {
     const { mode } = useMode();
@@ -212,7 +215,7 @@ export default function TuHocPage() {
                                     <div className={`max-w-[85%] rounded-2xl px-4 py-2 text-sm shadow-sm ${msg.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-sm' : 'bg-white border border-slate-200 text-slate-800 rounded-tl-sm'}`}>
                                         {msg.role === 'model' ? (
                                             <div className="prose prose-sm prose-slate max-w-none prose-p:leading-relaxed prose-pre:bg-slate-800 prose-pre:text-slate-100 prose-code:text-indigo-600 prose-code:bg-indigo-50 prose-code:px-1 prose-code:py-0.5 prose-code:rounded">
-                                                <ReactMarkdown>{msg.text}</ReactMarkdown>
+                                                <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{msg.text}</ReactMarkdown>
                                             </div>
                                         ) : (
                                             <div>
