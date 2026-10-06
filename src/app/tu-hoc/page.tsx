@@ -219,7 +219,7 @@ export default function TuHocPage() {
                                     )}
                                     <div className={`max-w-[85%] ${msg.role === 'user' ? 'rounded-2xl px-4 py-2.5 text-sm shadow-md bg-[#319b85] text-white rounded-tr-sm' : 'text-slate-200 text-sm w-full pt-1'}`}>
                                         {msg.role === 'model' ? (
-                                            <div className="prose prose-sm max-w-none prose-p:leading-relaxed prose-p:mb-3 prose-pre:bg-[#0f172a] prose-pre:text-slate-200 prose-pre:border prose-pre:border-[#334155] prose-pre:shadow-inner prose-code:text-[#319b85] prose-code:bg-[#0f172a] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-strong:text-[#fbbf24] prose-strong:font-bold prose-a:text-[#319b85] marker:text-[#319b85]">
+                                            <div className="prose prose-sm prose-invert text-slate-200 max-w-none prose-p:leading-relaxed prose-p:text-slate-200 prose-li:text-slate-200 prose-p:mb-3 prose-pre:bg-[#0f172a] prose-pre:text-slate-200 prose-pre:border prose-pre:border-[#334155] prose-pre:shadow-inner prose-code:text-[#319b85] prose-code:bg-[#0f172a] prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-strong:text-[#fbbf24] prose-strong:font-bold prose-a:text-[#319b85] marker:text-[#319b85]">
                                                 <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{msg.text}</ReactMarkdown>
                                             </div>
                                         ) : (
