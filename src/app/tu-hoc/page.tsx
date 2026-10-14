@@ -108,7 +108,7 @@ export default function TuHocPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     message: newMsg.text,
-                    documentName: selectedDoc.name,
+                    documentName: selectedDoc.displayName || selectedDoc.name,
                     history: chatMessages,
                     attachment: attachedFile || undefined
                 })
@@ -164,7 +164,7 @@ export default function TuHocPage() {
                                 <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                             </button>
                             <h3 className="font-bold text-slate-800 text-sm truncate max-w-[200px] sm:max-w-md">
-                                {selectedDoc.name.replace(/^hs-hsg[-_ ]?/i, '').replace(/^hs-hs[-_ ]?/i, '').replace('.pdf', '').replace(/_/g, ' ')}
+                                {selectedDoc.displayName || selectedDoc.name.replace(/^hs-hsg[-_ ]?/i, '').replace(/^hs-hs[-_ ]?/i, '').replace('.pdf', '').replace(/[-_]/g, ' ')}
                             </h3>
                         </div>
                         <div className="flex items-center gap-2">
@@ -353,7 +353,7 @@ export default function TuHocPage() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 pb-20">
                     {allFlatDocs.map((doc: any, idx: number) => {
                         const gradient = gradients[idx % gradients.length];
-                        const cleanName = doc.name.replace(/^hs-hsg[-_ ]?/i, '').replace(/^hs-hs[-_ ]?/i, '').replace('.pdf', '').replace(/_/g, ' ');
+                        const cleanName = doc.displayName || doc.name.replace(/^hs-hsg[-_ ]?/i, '').replace(/^hs-hs[-_ ]?/i, '').replace('.pdf', '').replace(/[-_]/g, ' ');
                         const isCompleted = completedDocs.includes(doc.url);
 
                         return (
