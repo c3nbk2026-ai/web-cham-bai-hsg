@@ -44,6 +44,10 @@ export async function GET() {
                     'TUAN 6': ['PALINNUM', 'RAUCU'],
                     'TUAN 7': ['PRIMEODD', 'SAURIENG'],
                     'TUAN 8': ['PALINPRIME', 'BODILINH'],
+                    'TUAN 9': ['NEGADIV', 'TUYENLAM'],
+                    'TUAN 10': ['ARMSTRONG', 'GIATRI'],
+                    'TUAN 11': ['RLECOMP', 'XECHO'],
+                    'TUAN 12': ['FIBONUM', 'TAITRONG'],
                 };
                 const expectedOrder = problemOrderMap[week] || [];
                 problems = fs.readdirSync(testCasesDir)
