@@ -36,7 +36,7 @@ export default function LuyenDePage() {
 
     useEffect(() => {
         setMode('LUYEN_DE');
-        fetch("/api/exams")
+        fetch("/api/exams", { cache: 'no-store' })
             .then(res => res.json())
             .then(data => {
                 setExams(data);

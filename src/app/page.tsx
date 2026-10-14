@@ -27,32 +27,41 @@ export default function Home() {
   const [modalTitle, setModalTitle] = useState('Lý thuyết đang học');
 
   useEffect(() => {
-    fetch("/api/tests")
+    fetch("/api/tests", { cache: 'no-store' })
       .then((res) => res.json())
       .then((data) => {
         setStructure(data);
-        const weeks = Object.keys(data).filter(w => w !== 'DE_KTGK');
-        if (weeks.length > 0) {
+        const searchParams = new URLSearchParams(window.location.search);
+        const paramWeek = searchParams.get('week');
+        const paramCat = searchParams.get('cat');
+        if (paramCat) setCategory(paramCat);
+
+        const weeks = Object.keys(data)
+          .filter(w => w !== 'DE_KTGK')
+          .sort((a, b) => {
+            const numA = parseInt(a.replace(/[^0-9]/g, '')) || 0;
+            const numB = parseInt(b.replace(/[^0-9]/g, '')) || 0;
+            return numA - numB;
+          });
+
+        if (paramWeek && weeks.includes(paramWeek)) {
+          setWeek(paramWeek);
+        } else if (weeks.length > 0) {
           setWeek(weeks[0]);
         }
       });
 
-    const searchParams = new URLSearchParams(window.location.search);
-    const paramWeek = searchParams.get('week');
-    const paramCat = searchParams.get('cat');
-    if (paramCat) setCategory(paramCat);
-
-    fetch("/api/docs")
+    fetch("/api/docs", { cache: 'no-store' })
       .then(res => res.json())
       .then(data => setDocsTree(data))
       .catch(() => console.log("Không thể tải tài liệu lý thuyết"));
 
-    fetch("/api/exams")
+    fetch("/api/exams", { cache: 'no-store' })
       .then(res => res.json())
       .then(data => setExamsList(data))
       .catch(() => console.log("Không thể tải danh sách đề thi"));
 
-    fetch("/data/students.json")
+    fetch("/data/students.json", { cache: 'no-store' })
       .then(res => res.json())
       .then(data => {
           setStudents(data);
