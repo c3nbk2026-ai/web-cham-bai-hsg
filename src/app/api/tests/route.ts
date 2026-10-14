@@ -65,7 +65,24 @@ export async function GET() {
                 tree[folder]["TL_TU_HOC"] = tuHocDirs;
                 
                 const deThiDirs = getDirs(['DE_THI/TestCases', 'DE_THI/BO_TEST']);
-                tree[folder]["DE_THI"] = deThiDirs.length > 0 ? deThiDirs : tuHocDirs;
+                const problemOrder: Record<string, string[]> = {
+                    'TUAN 1': ['TEST_NUMPRIME', 'TEST_CHONQUA'],
+                    'TUAN 2': ['TEST_NUMSUM', 'TEST_NONGSAN'],
+                    'TUAN 3': ['TEST_SIEUDEP', 'TEST_DALAT'],
+                    'TUAN 4': ['TEST_SOPHUONG', 'TEST_CHELOC'],
+                    'TUAN 5': ['TEST_HOANHAO', 'TEST_MUAHOA'],
+                    'TUAN 6': ['TEST_PALINNUM', 'TEST_RAUCU'],
+                };
+                const expectedOrder = problemOrder[folder] || [];
+                const sortedDeThi = [...deThiDirs].sort((a, b) => {
+                    const idxA = expectedOrder.indexOf(a);
+                    const idxB = expectedOrder.indexOf(b);
+                    if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+                    if (idxA !== -1) return -1;
+                    if (idxB !== -1) return 1;
+                    return a.localeCompare(b);
+                });
+                tree[folder]["DE_THI"] = sortedDeThi.length > 0 ? sortedDeThi : tuHocDirs;
             }
         }
         return NextResponse.json(tree);

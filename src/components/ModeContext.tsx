@@ -1,7 +1,7 @@
 "use client";
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-type Mode = 'DAI_TRA' | 'DOI_TUYEN';
+export type Mode = 'DAI_TRA' | 'DOI_TUYEN' | 'LUYEN_DE';
 
 interface ModeContextType {
     mode: Mode;
@@ -15,7 +15,7 @@ export function ModeProvider({ children }: { children: React.ReactNode }) {
 
     useEffect(() => {
         const savedMode = localStorage.getItem('app_mode') as Mode;
-        if (savedMode && (savedMode === 'DAI_TRA' || savedMode === 'DOI_TUYEN')) {
+        if (savedMode && (savedMode === 'DAI_TRA' || savedMode === 'DOI_TUYEN' || savedMode === 'LUYEN_DE')) {
             setModeState(savedMode);
         }
     }, []);
@@ -25,9 +25,15 @@ export function ModeProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem('app_mode', newMode);
     };
 
+    const themeClass = mode === 'DOI_TUYEN'
+        ? 'theme-doituyen'
+        : mode === 'LUYEN_DE'
+            ? 'theme-luyende'
+            : 'theme-daitra';
+
     return (
         <ModeContext.Provider value={{ mode, setMode }}>
-            <div className={mode === 'DOI_TUYEN' ? 'theme-doituyen' : 'theme-daitra'}>
+            <div className={themeClass}>
                 {children}
             </div>
         </ModeContext.Provider>

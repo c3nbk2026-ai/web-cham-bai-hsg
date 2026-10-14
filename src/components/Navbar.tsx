@@ -1,11 +1,12 @@
 "use client";
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useMode } from './ModeContext';
 
 export default function Navbar() {
     const pathname = usePathname();
+    const router = useRouter();
     const { mode, setMode } = useMode();
     const [showHistory, setShowHistory] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
@@ -19,16 +20,26 @@ export default function Navbar() {
 
     if (pathname === '/thi') return null;
 
+    let logoBg = 'bg-gradient-to-br from-indigo-500 to-cyan-500 shadow-indigo-500/30';
+    let logoText = 'bg-gradient-to-r from-indigo-600 to-cyan-600';
+    if (mode === 'DOI_TUYEN') {
+        logoBg = 'bg-gradient-to-br from-amber-500 to-rose-600 shadow-rose-500/30';
+        logoText = 'bg-gradient-to-r from-rose-600 to-amber-600';
+    } else if (mode === 'LUYEN_DE') {
+        logoBg = 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-500/30';
+        logoText = 'bg-gradient-to-r from-emerald-600 to-teal-600';
+    }
+
     return (
         <header className="bg-white/70 backdrop-blur-2xl border-b border-white/50 shadow-sm sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex justify-between items-center h-16">
               
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-lg transition-colors ${mode === 'DOI_TUYEN' ? 'bg-gradient-to-br from-amber-500 to-rose-600 shadow-rose-500/30' : 'bg-gradient-to-br from-indigo-500 to-cyan-500 shadow-indigo-500/30'}`}>
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-bold shadow-lg transition-colors ${logoBg}`}>
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
                 </div>
-                <div className={`font-black text-xl tracking-tight text-transparent bg-clip-text hidden sm:block ${mode === 'DOI_TUYEN' ? 'bg-gradient-to-r from-rose-600 to-amber-600' : 'bg-gradient-to-r from-indigo-600 to-cyan-600'}`}>
+                <div className={`font-black text-xl tracking-tight text-transparent bg-clip-text hidden sm:block ${logoText}`}>
                   ProCoder VIP
                 </div>
               </div>
@@ -36,21 +47,36 @@ export default function Navbar() {
               <div className="flex items-center gap-4">
                 <div className="flex items-center bg-slate-200/50 rounded-xl p-1 shadow-inner border border-slate-200 mr-2">
                     <button 
-                        onClick={() => setMode('DAI_TRA')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mode === 'DAI_TRA' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => {
+                            setMode('DAI_TRA');
+                            if (pathname === '/luyen-de') router.push('/tu-hoc');
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mode === 'DAI_TRA' && pathname !== '/luyen-de' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Cơ Bản
                     </button>
                     <button 
-                        onClick={() => setMode('DOI_TUYEN')}
-                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mode === 'DOI_TUYEN' ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                        onClick={() => {
+                            setMode('DOI_TUYEN');
+                            if (pathname === '/luyen-de') router.push('/tu-hoc');
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mode === 'DOI_TUYEN' && pathname !== '/luyen-de' ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
                     >
                         Nâng Cao 🚀
+                    </button>
+                    <button 
+                        onClick={() => {
+                            setMode('LUYEN_DE');
+                            router.push('/luyen-de');
+                        }}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mode === 'LUYEN_DE' || pathname === '/luyen-de' ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Luyện Đề 📝
                     </button>
                 </div>
 
                 <nav className="flex items-center gap-2 sm:gap-4">
-                  <Link href="/" className="px-3 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all">
+                  <Link href="/" className={`px-3 py-2 rounded-xl text-sm font-bold transition-all ${pathname === '/' ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/50'}`}>
                     Chấm Code
                   </Link>
                   <a href="/tu-hoc" onClick={(e) => { 
@@ -58,9 +84,12 @@ export default function Navbar() {
                           e.preventDefault();
                           window.dispatchEvent(new Event('resetTuHoc'));
                       }
-                  }} className="cursor-pointer px-3 py-2 rounded-xl text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all">
+                  }} className={`cursor-pointer px-3 py-2 rounded-xl text-sm font-bold transition-all ${pathname === '/tu-hoc' ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-600 hover:text-indigo-600 hover:bg-indigo-50/50'}`}>
                     Tự Học
                   </a>
+                  <Link href="/luyen-de" className={`px-3 py-2 rounded-xl text-sm font-bold transition-all ${pathname === '/luyen-de' ? 'text-emerald-600 bg-emerald-50/50' : 'text-slate-600 hover:text-emerald-600 hover:bg-emerald-50/50'}`}>
+                    Luyện Đề
+                  </Link>
                   <button onClick={() => setShowHistory(true)} className="hidden sm:inline-flex px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-cyan-600 text-white text-sm font-bold shadow-md shadow-indigo-500/20 hover:scale-105 transition-transform">
                     Lịch sử nộp bài
                   </button>

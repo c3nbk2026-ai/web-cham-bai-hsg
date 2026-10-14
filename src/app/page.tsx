@@ -21,8 +21,10 @@ export default function Home() {
   const [studentName, setStudentName] = useState("");
   const [students, setStudents] = useState<string[]>([]);
   const [docsTree, setDocsTree] = useState<any>({});
+  const [examsList, setExamsList] = useState<any[]>([]);
   const [showTheoryModal, setShowTheoryModal] = useState(false);
   const [theoryUrl, setTheoryUrl] = useState('');
+  const [modalTitle, setModalTitle] = useState('Lý thuyết đang học');
 
   useEffect(() => {
     fetch("/api/tests")
@@ -35,10 +37,20 @@ export default function Home() {
         }
       });
 
+    const searchParams = new URLSearchParams(window.location.search);
+    const paramWeek = searchParams.get('week');
+    const paramCat = searchParams.get('cat');
+    if (paramCat) setCategory(paramCat);
+
     fetch("/api/docs")
       .then(res => res.json())
       .then(data => setDocsTree(data))
       .catch(() => console.log("Không thể tải tài liệu lý thuyết"));
+
+    fetch("/api/exams")
+      .then(res => res.json())
+      .then(data => setExamsList(data))
+      .catch(() => console.log("Không thể tải danh sách đề thi"));
 
     fetch("/data/students.json")
       .then(res => res.json())
@@ -304,11 +316,36 @@ sys.stdout = io.StringIO()
                 <div className="w-3 h-3 rounded-full bg-emerald-400"></div>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => {
-                  const weekDocs = docsTree[week] || [];
-                  const doc = weekDocs.find((d: any) => d.mode === 'ALL' || d.mode === mode) || weekDocs[0];
-                  if(doc) { setTheoryUrl(doc.url); setShowTheoryModal(true); } else { alert('Chưa có lý thuyết cho tuần này'); }
-                }} className="flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm">📖 Lý Thuyết</button>
+                {category === 'DE_THI' ? (
+                  <button onClick={() => {
+                    const exam = examsList.find((e: any) => e.week === week);
+                    if (exam && exam.pdfUrl) {
+                      setTheoryUrl(exam.pdfUrl);
+                      setModalTitle('Đề Thi ' + week + ' - ' + exam.title);
+                      setShowTheoryModal(true);
+                    } else if (exam && exam.docxUrl) {
+                      window.open(exam.docxUrl, '_blank');
+                    } else {
+                      alert('Chưa có đề thi cho tuần này');
+                    }
+                  }} className="flex items-center gap-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm">
+                    📄 Đọc Đề Thi
+                  </button>
+                ) : (
+                  <button onClick={() => {
+                    const weekDocs = docsTree[week] || [];
+                    const doc = weekDocs.find((d: any) => d.mode === 'ALL' || d.mode === mode) || weekDocs[0];
+                    if(doc) {
+                      setTheoryUrl(doc.url);
+                      setModalTitle('Lý thuyết đang học');
+                      setShowTheoryModal(true);
+                    } else {
+                      alert('Chưa có lý thuyết cho tuần này');
+                    }
+                  }} className="flex items-center gap-2 bg-amber-100 hover:bg-amber-200 text-amber-700 px-4 py-2 rounded-xl text-sm font-bold transition-all shadow-sm">
+                    📖 Lý Thuyết
+                  </button>
+                )}
                 {results.length > 0 && (
                   <button onClick={exportResults} className="flex items-center gap-2 bg-white hover:bg-slate-50 text-indigo-600 px-4 py-2 rounded-xl text-sm font-bold transition-all border border-slate-200 shadow-sm hover:shadow">
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
@@ -415,7 +452,7 @@ sys.stdout = io.StringIO()
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-              <h3 className="font-bold text-lg text-slate-800">Lý thuyết đang học</h3>
+              <h3 className="font-bold text-lg text-slate-800">{modalTitle}</h3>
               <button onClick={() => setShowTheoryModal(false)} className="text-slate-400 hover:text-rose-500">
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>
               </button>
