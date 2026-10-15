@@ -6,7 +6,7 @@ const OLD_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID || "YOUR_SPREADSHEET_ID_
 const NEW_SPREADSHEET_ID = "1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
-async function askGemini(code, problem, maxScore) {
+async function askGemini(code: string, problem: string, maxScore: number | string) {
     if (!GEMINI_API_KEY) return { score: 0, reasoning: "Lỗi: Vercel không đọc được GEMINI_API_KEY" };
     if (!code.trim()) return { score: 0, reasoning: "Lỗi: Code rỗng" };
     
@@ -15,44 +15,58 @@ async function askGemini(code, problem, maxScore) {
     const keySuffix = GEMINI_API_KEY.slice(-5);
     const keyLength = GEMINI_API_KEY.length;
 
-    try {
-        const response = await fetch("https://generativelanguage.googleapis.com/v1/models/gemini-3.5-flash:generateContent?key=" + GEMINI_API_KEY.trim(), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: "Đóng vai giáo viên. Học sinh giải bài: " + problem + ". Code:\n" + code + "\n\nCode lỗi cú pháp/chạy sai (auto 0 điểm). Hãy đọc ý tưởng, nếu có tư duy đúng, cho điểm vớt (0 đến " + maxScore + "). Viết lời phê bằng Tiếng Việt CỰC KỲ NGẮN GỌN (Tối đa 1 câu). KẾT QUẢ CUỐI CÙNG BẮT BUỘC CHỈ LÀ MỘT CON SỐ DUY NHẤT."
+    const CANDIDATE_MODELS = [
+        'gemini-3.8-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-2.5-flash',
+        'gemini-3.5-flash'
+    ];
+
+    let lastError = "";
+
+    for (const model of CANDIDATE_MODELS) {
+        try {
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + GEMINI_API_KEY.trim(), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{
+                            text: "Đóng vai giáo viên. Học sinh giải bài: " + problem + ". Code:\n" + code + "\n\nCode lỗi cú pháp/chạy sai (auto 0 điểm). Hãy đọc ý tưởng, nếu có tư duy đúng, cho điểm vớt (0 đến " + maxScore + "). Viết lời phê bằng Tiếng Việt CỰC KỲ NGẮN GỌN (Tối đa 1 câu). KẾT QUẢ CUỐI CÙNG BẮT BUỘC CHỈ LÀ MỘT CON SỐ DUY NHẤT."
+                        }]
                     }]
-                }]
-            })
-        });
-        const data = await response.json();
-        
-        if (data.error) {
-            return { score: 0, reasoning: "Lỗi API (" + keyPrefix + "..." + keySuffix + ", len:" + keyLength + "): " + data.error.message };
-        }
+                })
+            });
+            const data = await response.json();
+            
+            if (data.error) {
+                lastError = data.error.message;
+                continue;
+            }
 
-        const parts = data.candidates?.[0]?.content?.parts || [];
-        const textParts = parts.filter(p => !p.thought);
-        const finalContent = textParts.map(p => p.text).join("\n").trim();
-        
-        const matches = finalContent.match(/\d+(\.\d+)?/g);
-        const numStr = matches ? matches[matches.length - 1] : "0";
-        const num = parseFloat(numStr);
-        
-        let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " ").trim();
-        if (reasoning.length > 150) {
-            reasoning = reasoning.substring(0, 150) + "...";
-        }
+            const parts = data.candidates?.[0]?.content?.parts || [];
+            const textParts = parts.filter((p: any) => !p.thought && p.text);
+            const finalContent = (textParts.length > 0 ? textParts.map((p: any) => p.text).join("\n") : parts.map((p: any) => p.text).join("\n")).trim();
+            
+            const matches = finalContent.match(/\d+(\.\d+)?/g);
+            const numStr = matches ? matches[matches.length - 1] : "0";
+            const num = parseFloat(numStr);
+            
+            let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " ").trim();
+            if (reasoning.length > 150) {
+                reasoning = reasoning.substring(0, 150) + "...";
+            }
 
-        return {
-            score: isNaN(num) ? 0 : num,
-            reasoning: reasoning || "Không trích xuất được lời phê"
-        };
-    } catch (e) {
-        return { score: 0, reasoning: "Lỗi kết nối AI: " + e.message };
+            return {
+                score: isNaN(num) ? 0 : num,
+                reasoning: reasoning || "Không trích xuất được lời phê"
+            };
+        } catch (e: any) {
+            lastError = e.message;
+        }
     }
+
+    return { score: 0, reasoning: "Lỗi API (" + keyPrefix + "..." + keySuffix + ", len:" + keyLength + "): " + (lastError || "Tất cả model AI đều đang quá tải") };
 }
 
 export async function POST(req: Request) {

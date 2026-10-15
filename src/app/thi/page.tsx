@@ -65,7 +65,7 @@ export default function ExamRoom() {
                 setAuthError("Mã Phòng Thi không đúng!");
             }
         }
-    } catch(e) {
+    } catch(e: any) {
         setAuthError("Lỗi kết nối máy chủ!");
     }
     setIsCheckingCode(false);
@@ -184,7 +184,7 @@ export default function ExamRoom() {
   };
 
   const tryFetch = async (url: string) => {
-    try { const r = await fetch(url); if (r.ok) return await r.text(); } catch(e) {}
+    try { const r = await fetch(url); if (r.ok) return await r.text(); } catch(e: any) {}
     return null;
   };
 
@@ -238,10 +238,10 @@ export default function ExamRoom() {
               } else if (isSmartMatch) {
                 passed += 0.5; // Diem vot nếu sai định dạng nhưng đúng kết quả số
               }
-            } catch(e) {}
+            } catch(e: any) {}
           }
         }
-      } catch(e) {}
+      } catch(e: any) {}
       finalScore = passed.toString();
       finalMax = testCases.length.toString();
       finalMsg += " (Tu dong cham: " + passed + "/" + testCases.length + " Test Cases dung)";
@@ -271,7 +271,7 @@ export default function ExamRoom() {
             const errData = await res.json();
             lastError = errData.error || ("Lỗi HTTP " + res.status);
           }
-        } catch(e) {
+        } catch(e: any) {
           lastError = e.message;
         }
         await new Promise(r => setTimeout(r, 2000));

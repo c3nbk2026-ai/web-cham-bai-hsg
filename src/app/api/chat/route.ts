@@ -45,22 +45,56 @@ export async function POST(req: Request) {
             parts: userParts
         });
 
-        const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=" + GEMINI_API_KEY.trim(), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                systemInstruction: { parts: [{ text: systemInstruction }] },
-                contents: contents
-            })
-        });
+        const CANDIDATE_MODELS = [
+            'gemini-3.8-flash',
+            'gemini-3.5-flash-lite',
+            'gemini-2.5-flash',
+            'gemini-3.5-flash'
+        ];
 
-        const data = await response.json();
-        
-        if (data.error) {
-            throw new Error(data.error.message);
+        let lastErrorMessage = "";
+        let successfulData: any = null;
+
+        for (const model of CANDIDATE_MODELS) {
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + GEMINI_API_KEY.trim(), {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        systemInstruction: { parts: [{ text: systemInstruction }] },
+                        contents: contents
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.error) {
+                    console.warn(`Model ${model} báo lỗi:`, data.error.message);
+                    lastErrorMessage = data.error.message;
+                    continue; // Thử model kế tiếp
+                }
+
+                if (data.candidates && data.candidates.length > 0) {
+                    successfulData = data;
+                    break; // Thành công!
+                }
+            } catch (err: any) {
+                console.warn(`Gọi model ${model} thất bại:`, err.message);
+                lastErrorMessage = err.message;
+            }
         }
 
-        const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "Xin lỗi, thầy/cô không thể trả lời lúc này.";
+        if (!successfulData) {
+            throw new Error(lastErrorMessage || "Tất cả model AI đều đang quá tải hoặc không khả dụng. Vui lòng thử lại sau.");
+        }
+
+        const candidate = successfulData.candidates?.[0];
+        const parts = candidate?.content?.parts || [];
+        const validParts = parts.filter((p: any) => !p.thought && p.text);
+        const reply = (validParts.length > 0
+            ? validParts.map((p: any) => p.text).join("\n")
+            : parts.map((p: any) => p.text).join("\n")
+        ).trim() || "Xin lỗi, thầy/cô không thể trả lời lúc này.";
         
         return NextResponse.json({ reply });
     } catch (error: any) {
