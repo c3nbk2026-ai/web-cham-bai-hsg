@@ -76,6 +76,13 @@ export default function ExamRoom() {
 
   useEffect(() => {
     fetch("/api/tests").then(r => r.json()).then(setStructure);
+    
+    const params = new URLSearchParams(window.location.search);
+    const studentParam = params.get('student');
+    const classParam = params.get('class');
+    if (studentParam) { setStudentName(studentParam); setIsStudentLocked(true); }
+    if (classParam) { setClassName(classParam); }
+
     fetch("/api/students?t=" + Date.now())
       .then(res => res.json())
       .then(data => {
@@ -89,16 +96,24 @@ export default function ExamRoom() {
         setStudentsData(data);
         const classes = Object.keys(data).sort();
         if (classes.length > 0) {
-          setClassName(classes[0]);
-          if (data[classes[0]].length > 0) {
-            setStudentName(data[classes[0]][0]);
+          if (classParam && data[classParam]) {
+            setClassName(classParam);
+            if (!studentParam && data[classParam].length > 0) {
+              setStudentName(data[classParam][0]);
+            }
+          } else {
+            setClassName(classes[0]);
+            if (!studentParam && data[classes[0]].length > 0) {
+              setStudentName(data[classes[0]][0]);
+            }
           }
+        }
+        if (studentParam) {
+          setStudentName(studentParam);
+          setIsStudentLocked(true);
         }
       })
       .catch(() => console.log("Lỗi tải danh sách học sinh"));
-    const params = new URLSearchParams(window.location.search);
-    const studentParam = params.get('student');
-    if (studentParam) { setStudentName(studentParam); setIsStudentLocked(true); }
   }, []);
 
   useEffect(() => {
