@@ -204,6 +204,17 @@ export default function ExamRoom() {
     return null;
   };
 
+  const getPyodideWithTimeout = async (timeoutMs = 8000) => {
+    try {
+      return await Promise.race([
+        initPyodide(),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), timeoutMs))
+      ]);
+    } catch(e) {
+      return null;
+    }
+  };
+
   const submitCode = async (isAutoSubmit = false) => {
     if (!examItem) return;
     if (!isAutoSubmit && !confirm("Bạn có chắc chắn muốn nộp bài? Hệ thống sẽ tự động chấm điểm và bạn KHÔNG THỂ sửa lại!")) return;
@@ -230,7 +241,7 @@ export default function ExamRoom() {
     if (testCases.length > 0) {
       let passed = 0;
       try {
-        const py = await initPyodide();
+        const py = await getPyodideWithTimeout(8000);
         if (py) {
           for (const t of testCases) {
             try {
@@ -240,9 +251,19 @@ export default function ExamRoom() {
               }
               py.globals.set("test_input_data", smartInp);
               py.globals.set("student_code", code);
-              await py.runPythonAsync("import sys, io\nsys.stdin = io.StringIO(test_input_data)\nsys.stdout = io.StringIO()");
-              await py.runPythonAsync("try:\n    exec(student_code, {})\nexcept:\n    pass");
-              const actual = await py.runPythonAsync("sys.stdout.getvalue()");
+
+              const runPromise = (async () => {
+                await py.runPythonAsync("import sys, io\nsys.stdin = io.StringIO(test_input_data)\nsys.stdout = io.StringIO()");
+                await py.runPythonAsync("try:\n    exec(student_code, {})\nexcept:\n    pass");
+                return await py.runPythonAsync("sys.stdout.getvalue()");
+              })();
+
+              // Mỗi test case tối đa 3 giây tránh treo nếu code học sinh lặp vô tận
+              const actual = await Promise.race([
+                runPromise,
+                new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
+              ]);
+
               const norm = (s: string) => (s || "").replace(/\r/g, "").split("\n").map((l: string) => l.trimEnd()).join("\n").trim();
               const extractNums = (s: string) => (s || "").match(/-?\d+(\.\d+)?/g) || [];
               const actualNums = extractNums(actual);
@@ -262,49 +283,62 @@ export default function ExamRoom() {
       finalScore = scoreOnScale3;
       finalMax = "3";
       finalMsg += " (Tu dong cham: " + passed + "/" + testCases.length + " Test dung -> " + scoreOnScale3 + "/3.0 diem)";
-      if (!isAutoSubmit) alert("Nộp bài thành công!\nĐiểm thực hành: " + scoreOnScale3 + " / 3.0 điểm (" + passed + "/" + testCases.length + " test đúng)");
     } else {
-      if (!isAutoSubmit) {
-        const userInput = prompt("Chua co bo Test tu dong cho de nay.\nNhap TONG SO CAU HOI de giao vien tu cham (vi du: 3):", "3");
-        finalMax = userInput || "3";
-        alert("Da ghi nhan bai nop!");
-      }
       finalMsg += " (Cham thu cong. Output: " + stdout.substring(0, 100).replace(/\n/g, " ") + ")";
     }
 
     const fullSub = "--- MA NGUON ---\n" + code + "\n\n--- KET QUA CHAY TAY ---\n" + stdout;
-          let success = false;
-      let lastError = "Lỗi mạng hoặc Server";
-      for (let retries = 3; retries > 0; retries--) {
-        try {
-          const res = await fetch('/api/sheets', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ studentName, mode: 'DE_THI', week: className, category: 'DE_THI', problem: problemName, score: finalScore, maxScore: finalMax, errorMsg: finalMsg, code: fullSub })
-          });
-          if (res.ok) {
-            success = true;
-            break;
-          } else {
-            const errData = await res.json();
-            lastError = errData.error || ("Lỗi HTTP " + res.status);
-          }
-        } catch(e: any) {
-          lastError = e.message;
-        }
-        await new Promise(r => setTimeout(r, 2000));
-      }
-      if (!success) {
-        alert("LỖI LƯU ĐIỂM: " + lastError + "\n\nHãy copy code nộp trực tiếp cho giáo viên!");
-      } else {
-        setSubmissionSuccessData({
-          score: finalScore,
-          maxScore: finalMax,
-          problem: problemName,
-          passed: testCases.length > 0 ? finalScore : "Đã nộp",
-          totalTests: testCases.length,
-          submittedAt: new Date().toLocaleTimeString('vi-VN') + " - " + new Date().toLocaleDateString('vi-VN')
+    let success = false;
+    let lastError = "Lỗi mạng hoặc Server";
+
+    for (let retries = 2; retries > 0; retries--) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 12000);
+
+        const res = await fetch('/api/sheets', {
+          method: 'POST', 
+          headers: { 'Content-Type': 'application/json' },
+          signal: controller.signal,
+          body: JSON.stringify({ 
+            studentName, 
+            mode: 'DE_THI', 
+            week: className, 
+            category: 'DE_THI', 
+            problem: problemName, 
+            score: finalScore, 
+            maxScore: finalMax, 
+            errorMsg: finalMsg, 
+            code: fullSub 
+          })
         });
+        clearTimeout(timeoutId);
+
+        if (res.ok) {
+          success = true;
+          break;
+        } else {
+          const errData = await res.json().catch(() => ({}));
+          lastError = errData.error || ("Lỗi HTTP " + res.status);
+        }
+      } catch(e: any) {
+        lastError = e.name === 'AbortError' ? "Kết nối quá hạn (Timeout)" : e.message;
       }
+      await new Promise(r => setTimeout(r, 1500));
+    }
+
+    if (!success) {
+      alert("LỖI LƯU ĐIỂM LÊN MÁY CHỦ: " + lastError + "\n\nVui lòng báo Giám thị/Giáo viên để ghi nhận mã nguồn!");
+    } else {
+      setSubmissionSuccessData({
+        score: finalScore,
+        maxScore: finalMax,
+        problem: problemName,
+        passed: testCases.length > 0 ? (finalScore + "/3.0") : "Đã nộp",
+        totalTests: testCases.length,
+        submittedAt: new Date().toLocaleTimeString('vi-VN') + " - " + new Date().toLocaleDateString('vi-VN')
+      });
+    }
     setIsSubmitting(false);
   };
 

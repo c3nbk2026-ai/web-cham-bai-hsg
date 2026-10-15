@@ -84,19 +84,22 @@ Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể
     const keyLength = GEMINI_API_KEY.length;
 
     const CANDIDATE_MODELS = [
-        'gemini-3.8-flash',
-        'gemini-3.5-flash-lite',
-        'gemini-2.5-flash',
-        'gemini-3.5-flash'
+        'gemini-1.5-flash',
+        'gemini-2.0-flash',
+        'gemini-2.5-flash'
     ];
 
     let lastError = "";
 
     for (const model of CANDIDATE_MODELS) {
         try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + GEMINI_API_KEY.trim(), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
                 body: JSON.stringify({
                     contents: [{
                         parts: [{
@@ -105,6 +108,7 @@ Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể
                     }]
                 })
             });
+            clearTimeout(timeoutId);
             const data = await response.json();
             
             if (data.error) {
@@ -205,33 +209,58 @@ export async function POST(req: Request) {
             targetRange = 'BangDiem_DoiTuyen!A:K';
         } else if (isKTGK) {
             targetSpreadsheetId = NEW_SPREADSHEET_ID;
-            targetRange = 'KetQua!A:K';
+            targetRange = 'DiemThucHanh!A:K';
         }
 
         if (targetSpreadsheetId === "YOUR_SPREADSHEET_ID_HERE") {
             return NextResponse.json({ success: true, demo: true });
         }
 
-        await sheets.spreadsheets.values.append({
-            spreadsheetId: targetSpreadsheetId,
-            range: targetRange,
-            valueInputOption: 'USER_ENTERED',
-            requestBody: {
-                values: [[
-                    timestamp,
-                    studentName,
-                    week,
-                    loaiBai,
-                    problem,
-                    numMaxScore,
-                    numScore,
-                    soTestSai,
-                    errorMsg || "",
-                    diem,
-                    code
-                ]],
-            },
-        });
+        try {
+            await sheets.spreadsheets.values.append({
+                spreadsheetId: targetSpreadsheetId,
+                range: targetRange,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: {
+                    values: [[
+                        timestamp,
+                        studentName,
+                        week,
+                        loaiBai,
+                        problem,
+                        numMaxScore,
+                        numScore,
+                        soTestSai,
+                        errorMsg || "",
+                        diem,
+                        code
+                    ]],
+                },
+            });
+        } catch (appendErr: any) {
+            console.warn("Append to targetRange failed, trying fallback...", appendErr.message);
+            const fallbackRange = targetRange.includes('DiemThucHanh') ? 'KetQua!A:K' : 'Sheet1!A:K';
+            await sheets.spreadsheets.values.append({
+                spreadsheetId: targetSpreadsheetId,
+                range: fallbackRange,
+                valueInputOption: 'USER_ENTERED',
+                requestBody: {
+                    values: [[
+                        timestamp,
+                        studentName,
+                        week,
+                        loaiBai,
+                        problem,
+                        numMaxScore,
+                        numScore,
+                        soTestSai,
+                        errorMsg || "",
+                        diem,
+                        code
+                    ]],
+                },
+            });
+        }
 
         return NextResponse.json({ success: true });
     } catch (error: any) {
