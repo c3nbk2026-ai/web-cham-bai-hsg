@@ -371,7 +371,6 @@ export default function ExamRoom() {
               <span className="font-bold text-indigo-400">{className}</span>
             </div>
             <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
-            <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
               <span className="text-slate-400 text-sm">Điểm Thực Hành:</span>
               <span className="font-bold text-emerald-400 text-lg">
                 {submissionSuccessData.score} / 3.0 điểm
