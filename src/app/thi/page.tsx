@@ -34,6 +34,7 @@ export default function ExamRoom() {
   const [violationCount, setViolationCount] = useState(0);
   const [isFinished, setIsFinished] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
+  const [submissionSuccessData, setSubmissionSuccessData] = useState<any>(null);
   
   // Security Layer States
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -293,11 +294,75 @@ export default function ExamRoom() {
       }
       if (!success) {
         alert("LỖI LƯU ĐIỂM: " + lastError + "\n\nHãy copy code nộp trực tiếp cho giáo viên!");
+      } else {
+        setSubmissionSuccessData({
+          score: finalScore,
+          maxScore: finalMax,
+          problem: problemName,
+          passed: testCases.length > 0 ? finalScore : "Đã nộp",
+          totalTests: testCases.length,
+          submittedAt: new Date().toLocaleTimeString('vi-VN') + " - " + new Date().toLocaleDateString('vi-VN')
+        });
       }
     setIsSubmitting(false);
   };
 
   const formatTime = (s: number) => Math.floor(s/60).toString().padStart(2,'0') + ':' + (s%60).toString().padStart(2,'0');
+
+  // MÀN HÌNH KHÓA CỨNG GIAO DIỆN SAU KHI NỘP BÀI THÀNH CÔNG
+  if (submissionSuccessData) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-white font-sans flex items-center justify-center p-4 relative z-[999999] select-none">
+        <div className="max-w-xl w-full bg-slate-900 border border-slate-700/80 rounded-3xl p-8 shadow-2xl relative overflow-hidden text-center animate-fade-in">
+          <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-emerald-500 via-teal-400 to-indigo-500"></div>
+          
+          <div className="w-24 h-24 bg-emerald-500/20 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-6 border-2 border-emerald-500/40 shadow-lg shadow-emerald-500/20">
+            <svg className="w-12 h-12" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M5 13l4 4L19 7"></path></svg>
+          </div>
+
+          <h2 className="text-3xl font-black text-white mb-2 tracking-tight">ĐÃ NỘP BÀI THÀNH CÔNG!</h2>
+          <div className="text-emerald-400 font-bold mb-6 flex items-center justify-center gap-2 bg-emerald-500/10 py-2 px-4 rounded-xl border border-emerald-500/20 max-w-fit mx-auto">
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            GIAO DIỆN PHÒNG THI ĐÃ ĐƯỢC KHÓA CỨNG
+          </div>
+
+          <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700/60 mb-6 text-left space-y-3">
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
+              <span className="text-slate-400 text-sm">Học sinh:</span>
+              <span className="font-bold text-white text-base">{studentName}</span>
+            </div>
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
+              <span className="text-slate-400 text-sm">Lớp:</span>
+              <span className="font-bold text-indigo-400">{className}</span>
+            </div>
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
+              <span className="text-slate-400 text-sm">Bài thi:</span>
+              <span className="font-bold text-amber-400 font-mono">{submissionSuccessData.problem}</span>
+            </div>
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
+              <span className="text-slate-400 text-sm">Kết quả tự động:</span>
+              <span className="font-bold text-emerald-400">
+                {submissionSuccessData.totalTests > 0 
+                  ? `${submissionSuccessData.passed}/${submissionSuccessData.totalTests} Test đúng` 
+                  : 'Đã lưu bài làm'}
+              </span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-slate-400 text-sm">Thời gian nộp:</span>
+              <span className="font-mono text-slate-300 text-sm">{submissionSuccessData.submittedAt}</span>
+            </div>
+          </div>
+
+          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-sm leading-relaxed text-left">
+            <div className="font-bold mb-1 flex items-center gap-1.5">
+              <span>⚠️</span> LƯU Ý DÀNH CHO THÍ SINH:
+            </div>
+            Bài làm và kết quả của em đã được đồng bộ an toàn về máy chủ Google Sheets của giáo viên. Mọi thao tác chỉnh sửa đã bị khóa hoàn toàn. Em vui lòng giữ nguyên màn hình này và báo giám thị trước khi rời vị trí.
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isAuthorized) {
     return (
