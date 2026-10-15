@@ -258,14 +258,15 @@ export default function ExamRoom() {
           }
         }
       } catch(e: any) {}
-      finalScore = passed.toString();
-      finalMax = testCases.length.toString();
-      finalMsg += " (Tu dong cham: " + passed + "/" + testCases.length + " Test Cases dung)";
-      if (!isAutoSubmit) alert("Nop bai thanh cong!\nDiem he thong cham tu dong: " + passed + "/" + testCases.length);
+      const scoreOnScale3 = (testCases.length > 0) ? (passed / testCases.length * 3).toFixed(1) : passed.toString();
+      finalScore = scoreOnScale3;
+      finalMax = "3";
+      finalMsg += " (Tu dong cham: " + passed + "/" + testCases.length + " Test dung -> " + scoreOnScale3 + "/3.0 diem)";
+      if (!isAutoSubmit) alert("Nộp bài thành công!\nĐiểm thực hành: " + scoreOnScale3 + " / 3.0 điểm (" + passed + "/" + testCases.length + " test đúng)");
     } else {
       if (!isAutoSubmit) {
         const userInput = prompt("Chua co bo Test tu dong cho de nay.\nNhap TONG SO CAU HOI de giao vien tu cham (vi du: 3):", "3");
-        finalMax = userInput || "N/A";
+        finalMax = userInput || "3";
         alert("Da ghi nhan bai nop!");
       }
       finalMsg += " (Cham thu cong. Output: " + stdout.substring(0, 100).replace(/\n/g, " ") + ")";
@@ -336,15 +337,18 @@ export default function ExamRoom() {
               <span className="font-bold text-indigo-400">{className}</span>
             </div>
             <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
-              <span className="text-slate-400 text-sm">Bài thi:</span>
-              <span className="font-bold text-amber-400 font-mono">{submissionSuccessData.problem}</span>
+            <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
+              <span className="text-slate-400 text-sm">Điểm Thực Hành:</span>
+              <span className="font-bold text-emerald-400 text-lg">
+                {submissionSuccessData.score} / 3.0 điểm
+              </span>
             </div>
             <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
-              <span className="text-slate-400 text-sm">Kết quả tự động:</span>
-              <span className="font-bold text-emerald-400">
+              <span className="text-slate-400 text-sm">Kết quả làm bài:</span>
+              <span className="font-bold text-indigo-400">
                 {submissionSuccessData.totalTests > 0 
                   ? `${submissionSuccessData.passed}/${submissionSuccessData.totalTests} Test đúng` 
-                  : 'Đã lưu bài làm'}
+                  : 'Đã nộp bài'}
               </span>
             </div>
             <div className="flex justify-between items-center">

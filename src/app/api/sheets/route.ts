@@ -118,15 +118,25 @@ Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể
             
             const matches = finalContent.match(/\d+(\.\d+)?/g);
             const numStr = matches ? matches[matches.length - 1] : "0";
-            const num = parseFloat(numStr);
+            let num = parseFloat(numStr);
+            if (isNaN(num)) num = 0;
+            const maxScoreNum = parseFloat(maxScore.toString()) || 3.0;
+
+            // Nếu AI trả về điểm theo thang 10 (ví dụ 6.7 hoặc 7) trong khi bài thi thang 3.0 điểm
+            if (num > 3.0 && maxScoreNum <= 3.0) {
+                num = Math.round((num / 10 * 3.0) * 10) / 10;
+            }
+            num = Math.min(maxScoreNum, num);
             
             let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " ").trim();
+            // Lọc bỏ các từ quy đổi thang 10 nếu AI lỡ viết
+            reasoning = reasoning.replace(/\b(?:6\.7|3\.3|10|thang 10|qui đổi|quy đổi)\b/gi, "").trim();
             if (reasoning.length > 150) {
                 reasoning = reasoning.substring(0, 150) + "...";
             }
 
             return {
-                score: isNaN(num) ? 0 : Math.min(parseFloat(maxScore.toString()), num),
+                score: num,
                 reasoning: reasoning || "Không trích xuất được lời phê"
             };
         } catch (e: any) {
@@ -144,16 +154,21 @@ export async function POST(req: Request) {
         
         let numScore = parseFloat(score) || 0;
         const originalScore = numScore; 
-        let numMaxScore = parseFloat(maxScore) || 0;
+        let numMaxScore = parseFloat(maxScore) || 3.0;
+
+        // Nhận diện bài thi KTGK (Thực hành Python 3 điểm)
+        const isKTGK = mode === 'DE_THI' || category === 'DE_THI' || numMaxScore <= 3.0;
 
         if (numScore < numMaxScore && numMaxScore > 0) {
             const extractCode = code.split("--- KET QUA CHAY TAY ---")[0]; 
-            const aiResult = await askGemini(extractCode, problem, numMaxScore);
+            const aiResult = await askGemini(extractCode, problem, isKTGK ? 3.0 : numMaxScore);
             
             if (aiResult.score > numScore) {
                 numScore = aiResult.score;
             }
-            const aiNote = " [AI VỚT: " + originalScore + "->" + numScore + "đ] Lời phê: " + aiResult.reasoning;
+            const aiNote = isKTGK 
+                ? " [AI VỚT: " + originalScore + "->" + numScore + "/3.0đ] Lời phê: " + aiResult.reasoning
+                : " [AI VỚT: " + originalScore + "->" + numScore + "đ] Lời phê: " + aiResult.reasoning;
             errorMsg = (errorMsg || "") + aiNote;
             score = numScore.toString();
         }
@@ -177,9 +192,9 @@ export async function POST(req: Request) {
         const loaiBai = category === "TL_TU_HOC" ? "Tự học" : "Đề thi";
         const soTestSai = Math.max(0, numMaxScore - originalScore);
         
-        // Với phần thi KTGK (mode === 'DE_THI'): thang điểm chuẩn là 3 điểm, không cần quy đổi ra thang 10
+        // Điểm thực hành KTGK luôn luôn lưu đúng thang 3 điểm (tối đa 3.0), TUYỆT ĐỐI không quy đổi ra thang 10
         let diem = numScore.toFixed(1);
-        if (mode !== 'DE_THI' && numMaxScore > 0) {
+        if (!isKTGK && numMaxScore > 3.0) {
             diem = ((numScore / numMaxScore) * 10).toFixed(1);
         }
 
@@ -188,7 +203,7 @@ export async function POST(req: Request) {
         
         if (mode === 'DOI_TUYEN') {
             targetRange = 'BangDiem_DoiTuyen!A:K';
-        } else if (mode === 'DE_THI') {
+        } else if (isKTGK) {
             targetSpreadsheetId = NEW_SPREADSHEET_ID;
             targetRange = 'KetQua!A:K';
         }
