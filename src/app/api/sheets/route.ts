@@ -84,9 +84,9 @@ Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể
     const keyLength = GEMINI_API_KEY.length;
 
     const CANDIDATE_MODELS = [
-        'gemini-1.5-flash',
-        'gemini-2.0-flash',
-        'gemini-2.5-flash'
+        'gemini-3.8-flash',
+        'gemini-3.5-flash',
+        'gemini-3.5-flash-lite'
     ];
 
     let lastError = "";
