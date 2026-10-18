@@ -135,6 +135,18 @@ export default function ExamRoom() {
       .catch(() => console.log("Lỗi tải danh sách học sinh"));
   }, []);
 
+  const findExamByProblemName = (pName: string) => {
+    if (!pName) return null;
+    const clean = pName.trim().toUpperCase();
+    for (const folder of Object.keys(structure)) {
+      if (Array.isArray(structure[folder]["DE_THI"])) {
+        const found = structure[folder]["DE_THI"].find((it: ExamItem) => it.problemName.toUpperCase() === clean);
+        if (found) return { folder, item: found };
+      }
+    }
+    return null;
+  };
+
   const checkStudentSubmissionStatus = async (targetStudent: string, targetClass: string) => {
     // 1. Kiểm tra máy tính này đã dùng nộp bài cho học sinh khác chưa (chống thi giùm trên cùng máy)
     try {
@@ -145,13 +157,36 @@ export default function ExamRoom() {
       }
     } catch (e) {}
 
-    // 2. Tra cứu Google Sheets (sheet DiemThucHanh)
+    // 2. Tra cứu tab DanhSachHS (cột F: MaDe) để kiểm tra lệnh mở khóa của Giáo viên
+    let assignInfo = { found: false, assignedExam: null as string | null, rowIndex: 0 };
+    try {
+      const resAssign = await fetch(`/api/exam-assign?studentName=${encodeURIComponent(targetStudent)}&className=${encodeURIComponent(targetClass)}&t=${Date.now()}`);
+      const assignData = await resAssign.json();
+      if (assignData.found) {
+        assignInfo = assignData;
+      }
+    } catch(err) {
+      console.error("Lỗi kiểm tra mã đề trên DanhSachHS:", err);
+    }
+
+    // NẾU GIÁO VIÊN ĐÃ XÓA MÃ ĐỀ Ở CỘT F TRÊN TAB DanhSachHS -> MỞ KHÓA CHO PHÉP THI LẠI!
+    if (assignInfo.found && !assignInfo.assignedExam) {
+      try {
+        localStorage.removeItem("exam_completed_submission");
+        localStorage.removeItem("exam_device_locked_student");
+        localStorage.removeItem(getAssignedExamKey(targetClass, targetStudent));
+      } catch(e) {}
+      setSubmissionSuccessData(null);
+      return { blocked: false, isUnlocked: true, rowIndex: assignInfo.rowIndex };
+    }
+
+    // 3. Nếu cột MaDe trên sheet vẫn còn -> Kiểm tra xem đã nộp bài trên sheet DiemThucHanh chưa
     try {
       const res = await fetch(`/api/sheets?studentName=${encodeURIComponent(targetStudent)}&className=${encodeURIComponent(targetClass)}&t=${Date.now()}`);
       const result = await res.json();
       if (result.submitted && result.data) {
         const d = result.data;
-        alert(`CẢNH BÁO: Học sinh "${targetStudent}" (${targetClass}) ĐÃ NỘP BÀI THI vào lúc ${d.timestamp} (Đạt ${d.score}/3.0 điểm).\n\nHệ thống từ chối cho phép thi lại hoặc thi giùm!`);
+        alert(`CẢNH BÁO: Học sinh "${targetStudent}" (${targetClass}) ĐÃ NỘP BÀI THI vào lúc ${d.timestamp} (Đạt ${d.score}/3.0 điểm).\n\n(Nếu cần thi lại, vui lòng báo Giáo viên xóa ô Mã Đề tại cột F trong Google Sheet để mở khóa!)`);
         const subData = {
           score: d.score,
           maxScore: "3.0",
@@ -172,7 +207,8 @@ export default function ExamRoom() {
     } catch (err) {
       console.error("Lỗi tra cứu bài nộp:", err);
     }
-    return { blocked: false };
+
+    return { blocked: false, assignedExam: assignInfo.assignedExam, rowIndex: assignInfo.rowIndex };
   };
 
   useEffect(() => {
@@ -233,21 +269,19 @@ export default function ExamRoom() {
     setIsCheckingStudent(false);
     if (check.blocked) return;
 
-    // 1. Kiểm tra nếu học sinh này đã từng bốc đề trước đó trên máy (Chống F5 để lựa đề khác)
-    try {
-      const savedExamStr = localStorage.getItem(getAssignedExamKey(className, studentName));
-      if (savedExamStr) {
-        const savedExam = JSON.parse(savedExamStr);
-        if (savedExam && savedExam.item) {
-          setExamItem(savedExam.item);
-          setTestFolder(savedExam.folder);
-          setHasDrawn(true);
-          alert(`Hệ thống ghi nhận bạn đã bốc thăm bài: "${savedExam.item.problemName}".\nĐề thi đã được cố định cho bạn và không thể đổi bằng cách tải lại trang!`);
-          return;
-        }
+    // 1. Nếu trên Google Sheet (cột F) ĐÃ CÓ MÃ ĐỀ: Cố định mã đề đó cho học sinh!
+    if (check.assignedExam) {
+      const found = findExamByProblemName(check.assignedExam);
+      if (found) {
+        setExamItem(found.item);
+        setTestFolder(found.folder);
+        setHasDrawn(true);
+        alert(`Hệ thống ghi nhận bạn đã được giao bài: "${found.item.problemName}" (Đã lưu cố định trên Google Sheet).\nKhông thể đổi đề bằng cách tải lại trang!`);
+        return;
       }
-    } catch(e) {}
+    }
 
+    // 2. Nếu cột F trên Google Sheet ĐANG TRỐNG (chưa bốc lần nào hoặc vừa được Giáo viên xóa ô MaDe để mở khóa):
     let all: {folder: string, item: ExamItem}[] = [];
     const requiredTopic = examConfig["Chủ đề"];
     
@@ -270,7 +304,19 @@ export default function ExamRoom() {
     setTestFolder(r.folder); 
     setHasDrawn(true);
 
-    // Lưu cố định đề thi đã bốc lần đầu của học sinh này vào localStorage
+    // Tự động đồng bộ mã đề vừa bốc lên cột F tab DanhSachHS trên Google Sheet của Giáo viên!
+    fetch('/api/exam-assign', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        studentName,
+        className,
+        examName: r.item.problemName,
+        rowIndex: check.rowIndex
+      })
+    }).catch(err => console.error("Lỗi đồng bộ mã đề lên Google Sheet:", err));
+
+    // Lưu dự phòng vào localStorage
     try {
       localStorage.setItem(getAssignedExamKey(className, studentName), JSON.stringify({ item: r.item, folder: r.folder }));
       localStorage.setItem("exam_device_locked_student", studentName);
