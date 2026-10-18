@@ -205,12 +205,48 @@ export default function ExamRoom() {
     return () => clearInterval(timer);
   }, [isExamStarted, isFinished]);
 
+  const getAssignedExamKey = (cls: string, name: string) => "assigned_exam_" + (cls || "").trim() + "_" + (name || "").trim().toLowerCase();
+
+  // Tự động khôi phục đề thi đã bốc khi học sinh chọn lại tên hoặc F5 trang
+  useEffect(() => {
+    if (!className || !studentName) return;
+    try {
+      const savedExamStr = localStorage.getItem(getAssignedExamKey(className, studentName));
+      if (savedExamStr) {
+        const savedExam = JSON.parse(savedExamStr);
+        if (savedExam && savedExam.item) {
+          setExamItem(savedExam.item);
+          setTestFolder(savedExam.folder);
+          setHasDrawn(true);
+          return;
+        }
+      }
+    } catch(e) {}
+    setHasDrawn(false);
+    setExamItem(null);
+  }, [className, studentName]);
+
   const drawExam = async () => {
     if (!studentName) return alert("Vui lòng chọn tên học sinh!");
     setIsCheckingStudent(true);
     const check = await checkStudentSubmissionStatus(studentName, className);
     setIsCheckingStudent(false);
     if (check.blocked) return;
+
+    // 1. Kiểm tra nếu học sinh này đã từng bốc đề trước đó trên máy (Chống F5 để lựa đề khác)
+    try {
+      const savedExamStr = localStorage.getItem(getAssignedExamKey(className, studentName));
+      if (savedExamStr) {
+        const savedExam = JSON.parse(savedExamStr);
+        if (savedExam && savedExam.item) {
+          setExamItem(savedExam.item);
+          setTestFolder(savedExam.folder);
+          setHasDrawn(true);
+          alert(`Hệ thống ghi nhận bạn đã bốc thăm bài: "${savedExam.item.problemName}".\nĐề thi đã được cố định cho bạn và không thể đổi bằng cách tải lại trang!`);
+          return;
+        }
+      }
+    } catch(e) {}
 
     let all: {folder: string, item: ExamItem}[] = [];
     const requiredTopic = examConfig["Chủ đề"];
@@ -230,7 +266,15 @@ export default function ExamRoom() {
     
     if (all.length === 0) return alert(`Không tìm thấy bài thi nào ${requiredTopic ? 'cho chủ đề ' + requiredTopic : ''}!`);
     const r = all[Math.floor(Math.random() * all.length)];
-    setExamItem(r.item); setTestFolder(r.folder); setHasDrawn(true);
+    setExamItem(r.item); 
+    setTestFolder(r.folder); 
+    setHasDrawn(true);
+
+    // Lưu cố định đề thi đã bốc lần đầu của học sinh này vào localStorage
+    try {
+      localStorage.setItem(getAssignedExamKey(className, studentName), JSON.stringify({ item: r.item, folder: r.folder }));
+      localStorage.setItem("exam_device_locked_student", studentName);
+    } catch(e) {}
   };
 
   const startExam = async () => {
@@ -481,6 +525,7 @@ export default function ExamRoom() {
                   try {
                     localStorage.removeItem("exam_completed_submission");
                     localStorage.removeItem("exam_device_locked_student");
+                    localStorage.removeItem(getAssignedExamKey(className, studentName));
                   } catch(e) {}
                   setSubmissionSuccessData(null);
                   setIsExamStarted(false);
