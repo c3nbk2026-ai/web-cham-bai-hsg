@@ -544,8 +544,8 @@ export default function ExamRoom() {
           </div>
         </div>
         <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* Code editor - full width, chiếm phần lớn không gian */}
-          <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+          {/* Code editor - full width, giảm kích thước vừa vặn cho bài làm ngắn */}
+          <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0">Trình soạn thảo Python (Pyodide)</div>
             <Editor
                 height="100%"
@@ -563,7 +563,7 @@ export default function ExamRoom() {
                 }}
               />
           </div>
-          {/* Hàng dưới: Đề thi (rộng) + STDIN + STDOUT nằm ngang */}
+          {/* Hàng dưới: Đề thi chiếm ưu thế không gian để đọc rõ ràng + STDIN + STDOUT */}
           <div className="flex-[2] flex gap-4 min-h-0">
             <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
