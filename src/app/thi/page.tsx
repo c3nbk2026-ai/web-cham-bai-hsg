@@ -35,6 +35,7 @@ export default function ExamRoom() {
   const [isFinished, setIsFinished] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
   const [submissionSuccessData, setSubmissionSuccessData] = useState<any>(null);
+  const [isCheckingStudent, setIsCheckingStudent] = useState(false);
   
   // Security Layer States
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -76,6 +77,23 @@ export default function ExamRoom() {
   const classes = ["10A1","10A2","10A3","10A4","10A5","10A6","10A7","10A8","10A9","10A10"];
 
   useEffect(() => {
+    // 1. Khôi phục trạng thái đã nộp từ localStorage để chống F5
+    try {
+      const savedSub = typeof window !== 'undefined' ? localStorage.getItem("exam_completed_submission") : null;
+      if (savedSub) {
+        const parsed = JSON.parse(savedSub);
+        if (parsed && parsed.studentName) {
+          setSubmissionSuccessData(parsed);
+          setStudentName(parsed.studentName);
+          if (parsed.className) setClassName(parsed.className);
+          setIsAuthorized(true);
+          setIsExamStarted(true);
+          setIsFinished(true);
+          return;
+        }
+      }
+    } catch(e) {}
+
     fetch("/api/tests").then(r => r.json()).then(setStructure);
     
     const params = new URLSearchParams(window.location.search);
@@ -117,6 +135,46 @@ export default function ExamRoom() {
       .catch(() => console.log("Lỗi tải danh sách học sinh"));
   }, []);
 
+  const checkStudentSubmissionStatus = async (targetStudent: string, targetClass: string) => {
+    // 1. Kiểm tra máy tính này đã dùng nộp bài cho học sinh khác chưa (chống thi giùm trên cùng máy)
+    try {
+      const deviceStudent = localStorage.getItem("exam_device_locked_student");
+      if (deviceStudent && deviceStudent.trim().toLowerCase() !== targetStudent.trim().toLowerCase()) {
+        alert(`CẢNH BÁO: Máy tính này đã được dùng để thi bài cho học sinh "${deviceStudent}". Mỗi học sinh chỉ được làm bài trên máy của mình. Tuyệt đối không được thi giùm bạn!`);
+        return { blocked: true, reason: "DEVICE_LOCKED" };
+      }
+    } catch (e) {}
+
+    // 2. Tra cứu Google Sheets (sheet DiemThucHanh)
+    try {
+      const res = await fetch(`/api/sheets?studentName=${encodeURIComponent(targetStudent)}&className=${encodeURIComponent(targetClass)}&t=${Date.now()}`);
+      const result = await res.json();
+      if (result.submitted && result.data) {
+        const d = result.data;
+        alert(`CẢNH BÁO: Học sinh "${targetStudent}" (${targetClass}) ĐÃ NỘP BÀI THI vào lúc ${d.timestamp} (Đạt ${d.score}/3.0 điểm).\n\nHệ thống từ chối cho phép thi lại hoặc thi giùm!`);
+        const subData = {
+          score: d.score,
+          maxScore: "3.0",
+          problem: d.problem,
+          passed: `${d.score}/3.0`,
+          totalTests: 3,
+          submittedAt: d.timestamp,
+          studentName: targetStudent,
+          className: targetClass
+        };
+        setSubmissionSuccessData(subData);
+        try {
+          localStorage.setItem("exam_completed_submission", JSON.stringify(subData));
+          localStorage.setItem("exam_device_locked_student", targetStudent);
+        } catch(e) {}
+        return { blocked: true, reason: "ALREADY_SUBMITTED" };
+      }
+    } catch (err) {
+      console.error("Lỗi tra cứu bài nộp:", err);
+    }
+    return { blocked: false };
+  };
+
   useEffect(() => {
     if (!isExamStarted || isFinished) return;
     const handleVisibility = () => {
@@ -147,7 +205,13 @@ export default function ExamRoom() {
     return () => clearInterval(timer);
   }, [isExamStarted, isFinished]);
 
-  const drawExam = () => {
+  const drawExam = async () => {
+    if (!studentName) return alert("Vui lòng chọn tên học sinh!");
+    setIsCheckingStudent(true);
+    const check = await checkStudentSubmissionStatus(studentName, className);
+    setIsCheckingStudent(false);
+    if (check.blocked) return;
+
     let all: {folder: string, item: ExamItem}[] = [];
     const requiredTopic = examConfig["Chủ đề"];
     
@@ -169,9 +233,14 @@ export default function ExamRoom() {
     setExamItem(r.item); setTestFolder(r.folder); setHasDrawn(true);
   };
 
-  const startExam = () => {
-    if (!studentName) return alert("Vui long chon ten hoc sinh!");
-    if (!examItem) return alert("Vui long boc tham de thi truoc!");
+  const startExam = async () => {
+    if (!studentName) return alert("Vui lòng chọn tên học sinh!");
+    if (!examItem) return alert("Vui lòng bốc thăm đề thi trước!");
+    setIsCheckingStudent(true);
+    const check = await checkStudentSubmissionStatus(studentName, className);
+    setIsCheckingStudent(false);
+    if (check.blocked) return;
+
     document.documentElement.requestFullscreen().then(() => setIsExamStarted(true)).catch(() => setIsExamStarted(true));
   };
 
@@ -330,14 +399,21 @@ export default function ExamRoom() {
     if (!success) {
       alert("LỖI LƯU ĐIỂM LÊN MÁY CHỦ: " + lastError + "\n\nVui lòng báo Giám thị/Giáo viên để ghi nhận mã nguồn!");
     } else {
-      setSubmissionSuccessData({
+      const successObj = {
         score: finalScore,
         maxScore: finalMax,
         problem: problemName,
         passed: testCases.length > 0 ? (finalScore + "/3.0") : "Đã nộp",
         totalTests: testCases.length,
-        submittedAt: new Date().toLocaleTimeString('vi-VN') + " - " + new Date().toLocaleDateString('vi-VN')
-      });
+        submittedAt: new Date().toLocaleTimeString('vi-VN') + " - " + new Date().toLocaleDateString('vi-VN'),
+        studentName,
+        className
+      };
+      setSubmissionSuccessData(successObj);
+      try {
+        localStorage.setItem("exam_completed_submission", JSON.stringify(successObj));
+        localStorage.setItem("exam_device_locked_student", studentName);
+      } catch(e) {}
     }
     setIsSubmitting(false);
   };
@@ -364,11 +440,11 @@ export default function ExamRoom() {
           <div className="bg-slate-800/80 rounded-2xl p-5 border border-slate-700/60 mb-6 text-left space-y-3">
             <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
               <span className="text-slate-400 text-sm">Học sinh:</span>
-              <span className="font-bold text-white text-base">{studentName}</span>
+              <span className="font-bold text-white text-base">{submissionSuccessData.studentName || studentName}</span>
             </div>
             <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
               <span className="text-slate-400 text-sm">Lớp:</span>
-              <span className="font-bold text-indigo-400">{className}</span>
+              <span className="font-bold text-indigo-400">{submissionSuccessData.className || className}</span>
             </div>
             <div className="flex justify-between items-center border-b border-slate-700/60 pb-2">
               <span className="text-slate-400 text-sm">Điểm Thực Hành:</span>
@@ -381,7 +457,7 @@ export default function ExamRoom() {
               <span className="font-bold text-indigo-400">
                 {submissionSuccessData.totalTests > 0 
                   ? `${submissionSuccessData.passed}/${submissionSuccessData.totalTests} Test đúng` 
-                  : 'Đã nộp bài'}
+                  : (submissionSuccessData.passed || 'Đã nộp bài')}
               </span>
             </div>
             <div className="flex justify-between items-center">
@@ -395,6 +471,31 @@ export default function ExamRoom() {
               <span>⚠️</span> LƯU Ý DÀNH CHO THÍ SINH:
             </div>
             Bài làm và kết quả của em đã được đồng bộ an toàn về máy chủ Google Sheets của giáo viên. Mọi thao tác chỉnh sửa đã bị khóa hoàn toàn. Em vui lòng giữ nguyên màn hình này và báo giám thị trước khi rời vị trí.
+          </div>
+
+          <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+            <button 
+              onClick={() => {
+                const code = prompt("DÀNH CHO GIÁM THỊ:\nNhập Mã Phòng Thi để mở khóa quyền thi lại trên máy này:");
+                if (code && examConfig["MaPhongThi"] && code.trim().toUpperCase() === examConfig["MaPhongThi"].trim().toUpperCase()) {
+                  try {
+                    localStorage.removeItem("exam_completed_submission");
+                    localStorage.removeItem("exam_device_locked_student");
+                  } catch(e) {}
+                  setSubmissionSuccessData(null);
+                  setIsExamStarted(false);
+                  setIsFinished(false);
+                  setHasDrawn(false);
+                  setExamItem(null);
+                  alert("Đã mở khóa phòng thi thành công!");
+                } else if (code) {
+                  alert("Mã Phòng Thi không đúng!");
+                }
+              }}
+              className="text-xs text-slate-500 hover:text-indigo-400 transition-colors underline cursor-pointer"
+            >
+              Giám thị: Mở khóa quyền thi lại (cần Mã Phòng Thi)
+            </button>
           </div>
         </div>
       </div>
@@ -490,17 +591,25 @@ export default function ExamRoom() {
             </div>
           </div>
           {!hasDrawn ? (
-            <button onClick={drawExam} className="w-full mt-4 bg-amber-500 hover:bg-amber-600 text-white font-bold py-4 rounded-xl shadow-lg shadow-amber-500/30 transition-transform active:scale-95 text-lg flex justify-center items-center gap-2">
+            <button 
+              onClick={drawExam} 
+              disabled={isCheckingStudent}
+              className="w-full mt-4 bg-amber-500 hover:bg-amber-600 disabled:bg-amber-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-amber-500/30 transition-transform active:scale-95 text-lg flex justify-center items-center gap-2"
+            >
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-              BOC THAM DE THI
+              {isCheckingStudent ? "ĐANG KIỂM TRA BÀI THI..." : "BỐC THĂM ĐỀ THI"}
             </button>
           ) : (
             <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl mt-4 text-center">
-              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">De thi cua ban:</div>
+              <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-1">Đề thi của bạn:</div>
               <div className="text-2xl font-black text-emerald-700">{examItem?.problemName}</div>
               <div className="text-xs text-emerald-500 mt-1">{examItem?.file}</div>
-              <button onClick={startExam} className="w-full mt-4 bg-rose-600 hover:bg-rose-700 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-600/30 transition-transform active:scale-95 text-lg">
-                VAO PHONG THI
+              <button 
+                onClick={startExam} 
+                disabled={isCheckingStudent}
+                className="w-full mt-4 bg-rose-600 hover:bg-rose-700 disabled:bg-rose-400 text-white font-bold py-4 rounded-xl shadow-lg shadow-rose-600/30 transition-transform active:scale-95 text-lg"
+              >
+                {isCheckingStudent ? "ĐANG KIỂM TRA BÀI THI..." : "VÀO PHÒNG THI"}
               </button>
             </div>
           )}

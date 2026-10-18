@@ -268,3 +268,80 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }
+
+export async function GET(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const studentName = searchParams.get('studentName')?.trim();
+        const className = searchParams.get('className')?.trim();
+
+        if (!studentName) {
+            return NextResponse.json({ error: "Thiếu tên học sinh" }, { status: 400 });
+        }
+
+        let auth;
+        if (process.env.GOOGLE_CREDENTIALS) {
+            auth = new google.auth.GoogleAuth({
+                credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
+                scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+            });
+        } else {
+            auth = new google.auth.GoogleAuth({
+                keyFile: path.join(process.cwd(), 'credentials.json'),
+                scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+            });
+        }
+
+        const sheets = google.sheets({ version: 'v4', auth });
+
+        let rows: any[] = [];
+        try {
+            const res = await sheets.spreadsheets.values.get({
+                spreadsheetId: NEW_SPREADSHEET_ID,
+                range: 'DiemThucHanh!A:K',
+            });
+            rows = res.data.values || [];
+        } catch (e: any) {
+            try {
+                const resFallback = await sheets.spreadsheets.values.get({
+                    spreadsheetId: NEW_SPREADSHEET_ID,
+                    range: 'KetQua!A:K',
+                });
+                rows = resFallback.data.values || [];
+            } catch (err) {}
+        }
+
+        if (rows.length === 0) {
+            return NextResponse.json({ submitted: false });
+        }
+
+        const norm = (s: string) => (s || "").trim().toLowerCase();
+        for (let i = rows.length - 1; i >= 0; i--) {
+            const row = rows[i];
+            const rStudent = norm(row[1]);
+            const rClass = norm(row[2]);
+
+            const matchStudent = rStudent === norm(studentName);
+            const matchClass = !className || rClass === norm(className);
+
+            if (matchStudent && matchClass) {
+                return NextResponse.json({
+                    submitted: true,
+                    data: {
+                        timestamp: row[0] || "",
+                        studentName: row[1] || studentName,
+                        className: row[2] || className,
+                        problem: row[4] || "",
+                        score: row[9] || row[6] || "0",
+                        note: row[8] || ""
+                    }
+                });
+            }
+        }
+
+        return NextResponse.json({ submitted: false });
+    } catch (error: any) {
+        console.error("Lỗi kiểm tra bài nộp:", error);
+        return NextResponse.json({ error: error.message || "Lỗi kiểm tra bài nộp" }, { status: 500 });
+    }
+}
