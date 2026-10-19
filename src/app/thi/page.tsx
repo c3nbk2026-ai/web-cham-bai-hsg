@@ -54,7 +54,9 @@ export default function ExamRoom() {
         if (data.error) {
             setAuthError("Lỗi: " + data.error);
         } else {
-            if (data["MaPhongThi"] === roomCodeInput) {
+            const cleanInput = (roomCodeInput || "").trim().toUpperCase();
+            const cleanTarget = (data["MaPhongThi"] || "").trim().toUpperCase();
+            if (cleanTarget && cleanInput === cleanTarget) {
                 setExamConfig(data);
                 if (data["ThoiGianThi"]) {
                     setTimeLeft(parseInt(data["ThoiGianThi"]) * 60);
@@ -609,7 +611,7 @@ export default function ExamRoom() {
               type="text" 
               placeholder="Nhập mã phòng thi..." 
               value={roomCodeInput}
-              onChange={e => setRoomCodeInput(e.target.value)}
+              onChange={e => setRoomCodeInput(e.target.value.toUpperCase())}
               onKeyDown={e => e.key === 'Enter' && handleAuth()}
               className="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-4 text-center text-2xl font-black tracking-widest text-indigo-400 focus:outline-none focus:border-indigo-500 uppercase shadow-inner"
             />
