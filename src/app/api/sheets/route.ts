@@ -84,9 +84,9 @@ Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể
     const keyLength = GEMINI_API_KEY.length;
 
     const CANDIDATE_MODELS = [
-        'gemini-3.8-flash',
-        'gemini-3.5-flash',
-        'gemini-3.5-flash-lite'
+        'gemini-2.5-flash',
+        'gemini-1.5-flash',
+        'gemini-2.0-flash'
     ];
 
     let lastError = "";
@@ -94,7 +94,7 @@ Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể
     for (const model of CANDIDATE_MODELS) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 6000); // 6s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
 
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + GEMINI_API_KEY.trim(), {
                 method: 'POST',
@@ -153,7 +153,14 @@ Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể
 
 export async function POST(req: Request) {
     try {
-        const body = await req.json();
+        let body: any;
+        const contentType = req.headers.get('content-type') || '';
+        if (contentType.includes('application/json')) {
+            body = await req.json();
+        } else {
+            const rawText = await req.text();
+            try { body = JSON.parse(rawText); } catch(e) { body = {}; }
+        }
         let { studentName, mode, week, category, problem, score, maxScore, errorMsg, code } = body;
         
         let numScore = parseFloat(score) || 0;
@@ -163,18 +170,25 @@ export async function POST(req: Request) {
         // Nhận diện bài thi KTGK (Thực hành Python 3 điểm)
         const isKTGK = mode === 'DE_THI' || category === 'DE_THI' || numMaxScore <= 3.0;
 
-        if (numScore < numMaxScore && numMaxScore > 0) {
-            const extractCode = code.split("--- KET QUA CHAY TAY ---")[0]; 
-            const aiResult = await askGemini(extractCode, problem, isKTGK ? 3.0 : numMaxScore);
-            
-            if (aiResult.score > numScore) {
-                numScore = aiResult.score;
+        if (numScore < numMaxScore && numMaxScore > 0 && code) {
+            try {
+                const extractCode = code.split("--- KET QUA CHAY TAY ---")[0]; 
+                if (GEMINI_API_KEY && extractCode.trim()) {
+                    const aiResult = await askGemini(extractCode, problem, isKTGK ? 3.0 : numMaxScore);
+                    if (aiResult && aiResult.score > numScore) {
+                        numScore = aiResult.score;
+                    }
+                    if (aiResult && aiResult.reasoning) {
+                        const aiNote = isKTGK 
+                            ? " [AI VỚT: " + originalScore + "->" + numScore + "/3.0đ] Lời phê: " + aiResult.reasoning
+                            : " [AI VỚT: " + originalScore + "->" + numScore + "đ] Lời phê: " + aiResult.reasoning;
+                        errorMsg = (errorMsg || "") + aiNote;
+                        score = numScore.toString();
+                    }
+                }
+            } catch (aiErr: any) {
+                console.warn("AI scoring error, skipping AI:", aiErr);
             }
-            const aiNote = isKTGK 
-                ? " [AI VỚT: " + originalScore + "->" + numScore + "/3.0đ] Lời phê: " + aiResult.reasoning
-                : " [AI VỚT: " + originalScore + "->" + numScore + "đ] Lời phê: " + aiResult.reasoning;
-            errorMsg = (errorMsg || "") + aiNote;
-            score = numScore.toString();
         }
 
         let auth;

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
@@ -43,6 +43,99 @@ export default function ExamRoom() {
   const [authError, setAuthError] = useState("");
   const [isCheckingCode, setIsCheckingCode] = useState(false);
   const [examConfig, setExamConfig] = useState<any>({});
+  const [autoSubmitNotice, setAutoSubmitNotice] = useState<string>("");
+
+  // Refs chống Stale Closure và phục vụ tự động nộp bài khi tắt trình duyệt / hết giờ
+  const codeRef = useRef(code);
+  const examItemRef = useRef(examItem);
+  const studentNameRef = useRef(studentName);
+  const classNameRef = useRef(className);
+  const testFolderRef = useRef(testFolder);
+  const violationCountRef = useRef(violationCount);
+  const isFinishedRef = useRef(isFinished);
+  const isSubmittingRef = useRef(isSubmitting);
+  const stdoutRef = useRef(stdout);
+  const isExamStartedRef = useRef(isExamStarted);
+  const latestGradedScoreRef = useRef<{ score: string, maxScore: string, msg: string } | null>(null);
+
+  useEffect(() => { codeRef.current = code; }, [code]);
+  useEffect(() => { examItemRef.current = examItem; }, [examItem]);
+  useEffect(() => { studentNameRef.current = studentName; }, [studentName]);
+  useEffect(() => { classNameRef.current = className; }, [className]);
+  useEffect(() => { testFolderRef.current = testFolder; }, [testFolder]);
+  useEffect(() => { violationCountRef.current = violationCount; }, [violationCount]);
+  useEffect(() => { isFinishedRef.current = isFinished; }, [isFinished]);
+  useEffect(() => { isSubmittingRef.current = isSubmitting; }, [isSubmitting]);
+  useEffect(() => { stdoutRef.current = stdout; }, [stdout]);
+  useEffect(() => { isExamStartedRef.current = isExamStarted; }, [isExamStarted]);
+
+  // Hàm tự động thu bài khẩn cấp khi học sinh đóng tab / tắt trình duyệt
+  const submitEmergencyOnExit = () => {
+    if (!isExamStartedRef.current || isFinishedRef.current) return;
+    const curStudent = studentNameRef.current;
+    const curClass = classNameRef.current;
+    const curExam = examItemRef.current;
+    if (!curStudent || !curExam) return;
+
+    // Đánh dấu ngay lập tức
+    isFinishedRef.current = true;
+    isSubmittingRef.current = true;
+
+    const curCode = codeRef.current || "";
+    const fullSub = "--- MA NGUON (TU DONG THU KHI DONG TAB / TRINH DUYET) ---\n" + curCode + "\n\n--- KET QUA CHAY TAY ---\n" + (stdoutRef.current || "");
+    const scoreObj = latestGradedScoreRef.current;
+    const finalScore = scoreObj ? scoreObj.score : "0";
+    const finalMax = scoreObj ? scoreObj.maxScore : "3";
+    const finalMsg = "Tự động thu bài khi tắt trình duyệt. Vi phạm: " + violationCountRef.current + " lần." + (scoreObj ? (" [" + scoreObj.msg + "]") : " [Chờ GV chấm]");
+
+    const payload = JSON.stringify({
+      studentName: curStudent,
+      mode: 'DE_THI',
+      week: curClass,
+      category: 'DE_THI',
+      problem: curExam.problemName,
+      score: finalScore,
+      maxScore: finalMax,
+      errorMsg: finalMsg,
+      code: fullSub
+    });
+
+    // Ưu tiên navigator.sendBeacon chuẩn W3C cho việc gửi dữ liệu khi đóng trang
+    let sent = false;
+    if (typeof navigator !== 'undefined' && navigator.sendBeacon) {
+      try {
+        const blob = new Blob([payload], { type: 'application/json' });
+        sent = navigator.sendBeacon('/api/sheets', blob);
+      } catch(e) {}
+    }
+
+    if (!sent && typeof fetch !== 'undefined') {
+      try {
+        fetch('/api/sheets', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload,
+          keepalive: true
+        });
+      } catch(e) {}
+    }
+
+    try {
+      const successObj = {
+        score: finalScore,
+        maxScore: finalMax,
+        problem: curExam.problemName,
+        passed: "Tự động nộp khi tắt trình duyệt",
+        totalTests: 0,
+        submittedAt: new Date().toLocaleTimeString('vi-VN') + " - " + new Date().toLocaleDateString('vi-VN'),
+        studentName: curStudent,
+        className: curClass
+      };
+      localStorage.setItem("exam_completed_submission", JSON.stringify(successObj));
+      localStorage.setItem("exam_device_locked_student", curStudent);
+      localStorage.removeItem("draft_code_" + curClass + "_" + curStudent);
+    } catch(e) {}
+  };
 
   const handleAuth = async () => {
     if (!roomCodeInput) return setAuthError("Vui lòng nhập Mã Phòng Thi!");
@@ -232,11 +325,45 @@ export default function ExamRoom() {
     };
   }, [isExamStarted, isFinished]);
 
+  
+  // TỰ ĐỘNG THU BÀI KHI HỌC SINH TẮT TRÌNH DUYỆT HOẶC ĐÓNG TAB
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isExamStartedRef.current && !isFinishedRef.current) {
+        submitEmergencyOnExit();
+        const msg = "⚠️ BÀI THI ĐANG DIỄN RA! Nếu bạn tắt trình duyệt hoặc đóng tab, hệ thống sẽ TỰ ĐỘNG NỘP BÀI làm hiện tại của bạn!";
+        e.preventDefault();
+        e.returnValue = msg;
+        return msg;
+      }
+    };
+
+    const handlePageHide = () => {
+      if (isExamStartedRef.current && !isFinishedRef.current) {
+        submitEmergencyOnExit();
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.removeEventListener("pagehide", handlePageHide);
+    };
+  }, []);
+
   useEffect(() => {
     if (!isExamStarted || isFinished) return;
     const timer = setInterval(() => {
       setTimeLeft(prev => {
-        if (prev <= 1) { clearInterval(timer); alert("HET GIO! He thong tu dong thu bai."); submitCode(true); return 0; }
+        if (prev <= 1) {
+          clearInterval(timer);
+          // Tự động thu bài và nộp ngay lập tức khi hết giờ, KHÔNG dùng alert() chặn luồng
+          if (!isFinishedRef.current && !isSubmittingRef.current) {
+            submitCode(true, "Hết thời gian làm bài");
+          }
+          return 0;
+        }
         return prev - 1;
       });
     }, 1000);
@@ -376,12 +503,23 @@ export default function ExamRoom() {
     }
   };
 
-  const submitCode = async (isAutoSubmit = false) => {
-    if (!examItem) return;
-    if (!isAutoSubmit && !confirm("Bạn có chắc chắn muốn nộp bài? Hệ thống sẽ tự động chấm điểm và bạn KHÔNG THỂ sửa lại!")) return;
-    setIsSubmitting(true); setIsFinished(true);
+  const submitCode = async (isAutoSubmit = false, autoReason = "") => {
+    const curExam = examItem || examItemRef.current;
+    if (!curExam) return;
+    if (isFinishedRef.current && !isSubmitting) return;
 
-    const { deFolderName, problemName } = examItem;
+    if (!isAutoSubmit) {
+      if (!confirm("Bạn có chắc chắn muốn nộp bài? Hệ thống sẽ tự động chấm điểm và bạn KHÔNG THỂ sửa lại!")) return;
+    } else {
+      setAutoSubmitNotice(autoReason || "Đã hết giờ làm bài! Hệ thống đang tự động thu bài và chấm điểm...");
+    }
+
+    setIsSubmitting(true);
+    setIsFinished(true);
+    isSubmittingRef.current = true;
+    isFinishedRef.current = true;
+
+    const { deFolderName, problemName } = curExam;
     // Tìm test cases: /data/DE_KTGK/Test_Case/De01/Test01/DIEM.INP
     const testCaseBase = "/data/" + testFolder + "/Test_Case/" + deFolderName;
     
@@ -455,7 +593,7 @@ export default function ExamRoom() {
     for (let retries = 2; retries > 0; retries--) {
       try {
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 12000);
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout cho nộp bài
 
         const res = await fetch('/api/sheets', {
           method: 'POST', 
@@ -574,6 +712,7 @@ export default function ExamRoom() {
                     localStorage.removeItem("exam_completed_submission");
                     localStorage.removeItem("exam_device_locked_student");
                     localStorage.removeItem(getAssignedExamKey(className, studentName));
+    localStorage.removeItem("draft_code_" + className + "_" + studentName);
                   } catch(e) {}
                   setSubmissionSuccessData(null);
                   setIsExamStarted(false);
@@ -724,7 +863,13 @@ export default function ExamRoom() {
     <main className="min-h-screen bg-slate-900 p-4 font-sans text-white select-none relative z-[99999]">
       <div className="max-w-[1600px] mx-auto flex flex-col gap-4 h-[calc(100vh-2rem)]">
         <div className="bg-slate-800 rounded-2xl p-4 flex justify-between items-center border border-slate-700 shadow-xl shrink-0">
-          <div className="flex items-center gap-4">
+          {autoSubmitNotice && (
+              <div className="px-4 py-2 bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-xl font-bold text-sm animate-pulse flex items-center gap-2">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                {autoSubmitNotice}
+              </div>
+            )}
+            <div className="flex items-center gap-4">
             <div className="px-4 py-2 bg-indigo-500/20 text-indigo-300 font-bold rounded-xl border border-indigo-500/30">{studentName} - {className}</div>
             <div className="px-4 py-2 bg-slate-700/50 text-slate-300 font-bold font-mono rounded-xl border border-slate-600">Bài: {examItem?.problemName}</div>
             {violationCount > 0 && (
@@ -754,7 +899,13 @@ export default function ExamRoom() {
                 defaultLanguage="python"
                 theme="vs-dark"
                 value={code}
-                onChange={(val) => setCode(val || "")}
+                onChange={(val) => {
+                  const newCode = val || "";
+                  setCode(newCode);
+                  if (className && studentName) {
+                    try { localStorage.setItem("draft_code_" + className + "_" + studentName, newCode); } catch(e) {}
+                  }
+                }}
                 options={{
                   minimap: { enabled: false },
                   fontSize: 16,
