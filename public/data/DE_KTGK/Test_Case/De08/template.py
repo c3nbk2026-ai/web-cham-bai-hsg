@@ -8,5 +8,6 @@ d = int(input())
 while ...:
     d = int(input())
 
-# Bước 3: Xuất thông báo
+# Bước 3: Xuất thông báo và giá trị
 print("DA NHAP SO TRON CHUC")
+print(d)

@@ -8,5 +8,6 @@ a = float(input())
 while ...:
     a = float(input())
 
-# Bước 3: Xuất thông báo
+# Bước 3: Xuất thông báo và giá trị
 print("DA NHAP CANH HINH VUONG")
+print(a)
