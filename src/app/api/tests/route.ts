@@ -41,10 +41,20 @@ export async function GET() {
                             }
                         }
                         
+                        // Đọc code mẫu điền khuyết (nếu có file template.py)
+                        let templateCode = "";
+                        const templateFilePath = path.join(dataDir, folder, 'Test_Case', deFolderName, 'template.py');
+                        if (fs.existsSync(templateFilePath)) {
+                            try {
+                                templateCode = fs.readFileSync(templateFilePath, 'utf8');
+                            } catch(e) {}
+                        }
+                        
                         return {
                             file,          // "1.docx" - dùng để hiển thị viewer
                             deFolderName,  // "De01" - dùng để tìm TestCases
                             problemName,   // "DIEM" - tên file INP/OUT
+                            templateCode,  // Code mẫu điền khuyết
                         };
                     }
                     return { file, deFolderName: '', problemName: baseName };

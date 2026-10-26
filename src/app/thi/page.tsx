@@ -11,6 +11,7 @@ interface ExamItem {
   file: string;        // "1.docx"
   deFolderName: string; // "De01"
   problemName: string;  // "DIEM"
+  templateCode?: string; // Code mẫu điền khuyết
 }
 
 export default function ExamRoom() {
