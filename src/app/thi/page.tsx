@@ -165,7 +165,11 @@ export default function ExamRoom() {
                     setTimeLeft(parseInt(data["ThoiGianThi"]) * 60);
                 }
                 if (data["LopDangThi"]) {
-                    setClassName(data["LopDangThi"]);
+                    const activeClass = data["LopDangThi"].trim();
+                    setClassName(activeClass);
+                    if (studentsData[activeClass] && studentsData[activeClass].length > 0) {
+                        setStudentName(studentsData[activeClass][0]);
+                    }
                 }
                 setIsAuthorized(true);
             } else {
@@ -290,6 +294,20 @@ export default function ExamRoom() {
     const classes = ["10A1","10A2","10A3","10A4","10A5","10A6","10A7","10A8","10A9","10A10"];
 
   useEffect(() => {
+    // 0. Dọn sạch cache đề cũ nếu phiên bản ngân hàng đề đã thay đổi lên 12 đề chuẩn hóa
+    const BANK_VERSION = "2026_KTGK_V4_12DE";
+    try {
+      const currentVer = typeof window !== 'undefined' ? localStorage.getItem("exam_bank_version") : null;
+      if (currentVer !== BANK_VERSION) {
+        Object.keys(localStorage).forEach(key => {
+          if (key.startsWith("assigned_exam_") || key.startsWith("draft_code_") || key.startsWith("exam_device_locked_student")) {
+            localStorage.removeItem(key);
+          }
+        });
+        localStorage.setItem("exam_bank_version", BANK_VERSION);
+      }
+    } catch(e) {}
+
     // 1. Khôi phục trạng thái đã nộp từ sessionStorage (chỉ trong cùng phiên tab hiện tại, không khóa máy cho học sinh sau)
     try {
       const savedSub = typeof window !== 'undefined' ? sessionStorage.getItem("exam_completed_submission") : null;
@@ -417,6 +435,15 @@ export default function ExamRoom() {
     return { blocked: false, assignedExam: assignInfo.assignedExam, rowIndex: assignInfo.rowIndex };
   };
 
+  // Đảm bảo tên học sinh luôn thuộc lớp đang chọn, không bao giờ bị lệch sang lớp khác
+  useEffect(() => {
+    if (className && studentsData[className] && studentsData[className].length > 0) {
+      if (!studentName || !studentsData[className].includes(studentName)) {
+        setStudentName(studentsData[className][0]);
+      }
+    }
+  }, [className, studentsData, studentName]);
+
   // Tự động nạp code mẫu điền khuyết khi có đề thi
   useEffect(() => {
     if (examItem && examItem.templateCode) {
@@ -497,24 +524,32 @@ export default function ExamRoom() {
 
   const getAssignedExamKey = (cls: string, name: string) => "assigned_exam_" + (cls || "").trim() + "_" + (name || "").trim().toLowerCase();
 
-  // Tự động khôi phục đề thi đã bốc khi học sinh chọn lại tên hoặc F5 trang
+  // Tự động khôi phục đề thi đã bốc khi học sinh chọn lại tên hoặc F5 trang (luôn đối chiếu với structure mới nhất từ server)
   useEffect(() => {
-    if (!className || !studentName) return;
+    if (!className || !studentName || Object.keys(structure).length === 0) return;
     try {
       const savedExamStr = localStorage.getItem(getAssignedExamKey(className, studentName));
       if (savedExamStr) {
         const savedExam = JSON.parse(savedExamStr);
-        if (savedExam && savedExam.item) {
-          setExamItem(savedExam.item);
-          setTestFolder(savedExam.folder);
-          setHasDrawn(true);
-          return;
+        const pName = savedExam?.item?.problemName || savedExam?.problemName;
+        if (pName) {
+          const freshExam = findExamByProblemName(pName);
+          if (freshExam) {
+            setExamItem(freshExam.item);
+            setTestFolder(freshExam.folder);
+            setHasDrawn(true);
+            return;
+          } else {
+            // Đề cũ (như INSOGIAM1) không còn trong ngân hàng đề -> xóa cache rác
+            localStorage.removeItem(getAssignedExamKey(className, studentName));
+            localStorage.removeItem("draft_code_" + className + "_" + studentName);
+          }
         }
       }
     } catch(e) {}
     setHasDrawn(false);
     setExamItem(null);
-  }, [className, studentName]);
+  }, [className, studentName, structure]);
 
   const drawExam = async () => {
     if (!studentName) return alert("Vui lòng chọn tên học sinh!");
@@ -1109,6 +1144,9 @@ export default function ExamRoom() {
                 onClick={() => {
                   if (examItem?.templateCode) {
                     setCode(examItem.templateCode);
+                    try {
+                      localStorage.removeItem("draft_code_" + className + "_" + studentName);
+                    } catch(e) {}
                   }
                   setShowResetCodeModal(false);
                 }}
