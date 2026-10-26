@@ -975,7 +975,7 @@ export default function ExamRoom() {
   let viewerUrl = "";
   if (examItem) {
     if (examItem.file.toLowerCase().endsWith('.docx')) {
-      viewerUrl = "https://view.officeapps.live.com/op/embed.aspx?src=" + encodeURIComponent(window.location.origin + "/data/" + testFolder + "/" + examItem.file) + "&wdZoom=110";
+      viewerUrl = "https://view.officeapps.live.com/op/embed.aspx?src=" + encodeURIComponent(window.location.origin + "/data/" + testFolder + "/" + examItem.file) + "&wdZoom=100";
     } else {
       viewerUrl = "/data/" + testFolder + "/" + examItem.file + "#toolbar=0&navpanes=0&zoom=110";
     }
@@ -1061,7 +1061,7 @@ export default function ExamRoom() {
                 Nội dung Đề Thi — {examItem?.problemName}
               </div>
               <div className="w-full flex-1 relative overflow-hidden bg-white">
-                <iframe src={viewerUrl} className="absolute top-0 left-[-15%] w-[130%] h-[calc(100%+38px)] border-0" title="Noi dung de thi" />
+                <iframe src={viewerUrl} className="absolute top-0 left-[-10%] w-[120%] h-[calc(100%+38px)] border-0" title="Noi dung de thi" />
               </div>
             </div>
             <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
