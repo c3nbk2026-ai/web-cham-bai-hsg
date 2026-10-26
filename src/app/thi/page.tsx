@@ -1013,8 +1013,8 @@ export default function ExamRoom() {
           </div>
         </div>
         <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* Code editor - tăng chiều cao lên flex-[1.4] để hiển thị trọn vẹn toàn bộ các dòng code mẫu */}
-          <div className="flex-[1.4] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+          {/* Code editor - vừa khít 11-13 dòng code mẫu, nhường chiều cao cho khung đề thi */}
+          <div className="flex-[0.95] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
               <span>Trình soạn thảo Python (Pyodide)</span>
               {examItem?.templateCode && (
@@ -1053,8 +1053,8 @@ export default function ExamRoom() {
                 }}
               />
           </div>
-          {/* Hàng dưới: Đề thi + STDIN + STDOUT */}
-          <div className="flex-1 flex gap-4 min-h-0">
+          {/* Hàng dưới: Đề thi chiếm ưu thế flex-[1.25] để hiển thị trọn vẹn bảng Test Case */}
+          <div className="flex-[1.25] flex gap-4 min-h-0">
             <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
