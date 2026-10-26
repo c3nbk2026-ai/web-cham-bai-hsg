@@ -295,7 +295,7 @@ export default function ExamRoom() {
 
   useEffect(() => {
     // 0. Dọn sạch cache đề cũ nếu phiên bản ngân hàng đề đã thay đổi lên 12 đề chuẩn hóa
-    const BANK_VERSION = "2026_KTGK_V4_12DE";
+    const BANK_VERSION = "2026_KTGK_V5_CLEAN_TEMPLATES";
     try {
       const currentVer = typeof window !== 'undefined' ? localStorage.getItem("exam_bank_version") : null;
       if (currentVer !== BANK_VERSION) {
@@ -444,19 +444,22 @@ export default function ExamRoom() {
     }
   }, [className, studentsData, studentName]);
 
-  // Tự động nạp code mẫu điền khuyết khi có đề thi
+  // Tự động nạp code mẫu điền khuyết khi có đề thi (chỉ khôi phục bản nháp khi học sinh đang thi bị F5)
   useEffect(() => {
     if (examItem && examItem.templateCode) {
-      try {
-        const savedDraft = localStorage.getItem("draft_code_" + className + "_" + studentName);
-        if (savedDraft && savedDraft.trim() && savedDraft !== "# Viết code tại đây\n") {
-          setCode(savedDraft);
-          return;
-        }
-      } catch(e) {}
+      if (isExamStarted) {
+        try {
+          const savedDraft = localStorage.getItem("draft_code_" + className + "_" + studentName);
+          if (savedDraft && savedDraft.trim() && savedDraft !== "# Viết code tại đây\n") {
+            setCode(savedDraft);
+            return;
+          }
+        } catch(e) {}
+      }
+      // Khi mới bốc đề hoặc chưa bắt đầu thi: LUÔN LUÔN nạp code mẫu điền khuyết nguyên bản (while ...:)
       setCode(examItem.templateCode);
     }
-  }, [examItem]);
+  }, [examItem, isExamStarted]);
 
   useEffect(() => {
     if (!isExamStarted || isFinished) return;
@@ -592,6 +595,10 @@ export default function ExamRoom() {
     
     if (all.length === 0) return alert(`Không tìm thấy bài thi nào ${requiredTopic ? 'cho chủ đề ' + requiredTopic : ''}!`);
     const r = all[Math.floor(Math.random() * all.length)];
+    // Xóa sạch bản nháp cũ của thí sinh này để đảm bảo vào thi với code mẫu nguyên bản
+    try {
+      localStorage.removeItem("draft_code_" + className + "_" + studentName);
+    } catch(e) {}
     setExamItem(r.item); 
     setTestFolder(r.folder); 
     setHasDrawn(true);
