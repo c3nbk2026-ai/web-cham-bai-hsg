@@ -221,6 +221,72 @@ export default function ExamRoom() {
     }
   };
 
+  const renderTeacherUnlockModal = () => {
+    if (!showTeacherUnlockModal) return null;
+    return (
+      <div className="fixed inset-0 z-[99999999] bg-slate-950/85 backdrop-blur-md flex items-center justify-center p-4">
+        <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white">Xác thực Giáo viên / Giám thị</h3>
+              <p className="text-xs text-slate-400">Mật khẩu quy định tại ô B6 tab CauHinh</p>
+            </div>
+          </div>
+
+          <p className="text-xs text-slate-300 mb-4 bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+            Nhập Mật khẩu Giáo viên để mở khóa máy tính cho học sinh thi lại hoặc chuyển máy cho thí sinh ca sau.
+          </p>
+
+          <div className="space-y-3 mb-5">
+            <input 
+              type="password" 
+              autoFocus
+              placeholder="Nhập mật khẩu Giáo viên..." 
+              value={teacherPassInput}
+              onChange={e => {
+                setTeacherPassInput(e.target.value);
+                setTeacherUnlockError("");
+              }}
+              onKeyDown={e => e.key === 'Enter' && handleTeacherUnlock()}
+              className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-indigo-500 shadow-inner"
+            />
+            {teacherUnlockError && (
+              <div className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg">
+                {teacherUnlockError}
+              </div>
+            )}
+          </div>
+
+          <div className="flex justify-end gap-3">
+            <button 
+              type="button"
+              onClick={() => {
+                setShowTeacherUnlockModal(false);
+                setTeacherPassInput("");
+                setTeacherUnlockError("");
+              }}
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm transition-colors cursor-pointer"
+            >
+              Hủy bỏ
+            </button>
+            <button 
+              type="button"
+              onClick={handleTeacherUnlock}
+              disabled={isVerifyingTeacherPass}
+              className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
+            >
+              {isVerifyingTeacherPass ? "Đang xác thực..." : "Xác nhận mở khóa"}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+
     const classes = ["10A1","10A2","10A3","10A4","10A5","10A6","10A7","10A8","10A9","10A10"];
 
   useEffect(() => {
@@ -785,6 +851,7 @@ export default function ExamRoom() {
             </button>
           </div>
         </div>
+        {renderTeacherUnlockModal()}
       </div>
     );
   }
@@ -1008,68 +1075,8 @@ export default function ExamRoom() {
           </div>
         </div>
       </div>
-      {/* MODAL 1: Mở khóa Giáo viên (Mật khẩu ô B6 tab CauHinh) */}
-      {showTeacherUnlockModal && (
-        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-white">Xác thực Giáo viên / Giám thị</h3>
-                <p className="text-xs text-slate-400">Mật khẩu quy định tại ô B6 tab CauHinh</p>
-              </div>
-            </div>
-
-            <p className="text-xs text-slate-300 mb-4 bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
-              Nhập Mật khẩu Giáo viên để mở khóa máy tính cho học sinh thi lại hoặc chuyển máy cho thí sinh ca sau.
-            </p>
-
-            <div className="space-y-3 mb-5">
-              <input 
-                type="password" 
-                autoFocus
-                placeholder="Nhập mật khẩu Giáo viên..." 
-                value={teacherPassInput}
-                onChange={e => {
-                  setTeacherPassInput(e.target.value);
-                  setTeacherUnlockError("");
-                }}
-                onKeyDown={e => e.key === 'Enter' && handleTeacherUnlock()}
-                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-indigo-500 shadow-inner"
-              />
-              {teacherUnlockError && (
-                <div className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg">
-                  {teacherUnlockError}
-                </div>
-              )}
-            </div>
-
-            <div className="flex justify-end gap-3">
-              <button 
-                type="button"
-                onClick={() => {
-                  setShowTeacherUnlockModal(false);
-                  setTeacherPassInput("");
-                  setTeacherUnlockError("");
-                }}
-                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm transition-colors cursor-pointer"
-              >
-                Hủy bỏ
-              </button>
-              <button 
-                type="button"
-                onClick={handleTeacherUnlock}
-                disabled={isVerifyingTeacherPass}
-                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
-              >
-                {isVerifyingTeacherPass ? "Đang xác thực..." : "Xác nhận mở khóa"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* MODAL 1: Mở khóa Giáo viên */}
+      {renderTeacherUnlockModal()}
 
       {/* MODAL 2: Xác nhận Khôi phục Code Mẫu (In-app, nằm trọn vẹn trong Fullscreen) */}
       {showResetCodeModal && (
