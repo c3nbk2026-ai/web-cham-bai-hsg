@@ -7,45 +7,53 @@ const NEW_SPREADSHEET_ID = "1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 const KTGK_PROBLEMS: Record<string, { title: string, desc: string }> = {
-    'DIEM': {
-        title: 'Kiểm tra kết quả học tập',
-        desc: 'Nhập điểm trung bình môn Tin học (số thực float). Nếu điểm >= 5.0 in "DAT", ngược lại in "CHUA DAT".'
+    'NHAPAM': {
+        title: 'Điều khiển nhập số nguyên âm (x < 0)',
+        desc: 'Nhập số nguyên x. Dùng vòng lặp while yêu cầu nhập lại nếu x >= 0. Khi nhập đúng số âm thì dừng, in "DA NHAP SO AM" và in x.'
     },
-    'CHANLE': {
-        title: 'Kiểm tra tính chẵn lẻ',
-        desc: 'Nhập số nguyên n từ bàn phím. Nếu n là số chẵn in "SO CHAN", ngược lại in "SO LE".'
+    'NHAPKHONGAM': {
+        title: 'Điều khiển nhập số nguyên không âm (y >= 0)',
+        desc: 'Nhập số nguyên y. Dùng vòng lặp while yêu cầu nhập lại nếu y < 0. Khi nhập đúng số không âm thì dừng, in "DA NHAP SO KHONG AM" và in y.'
     },
-    'TUOI': {
-        title: 'Kiểm tra độ tuổi công dân',
-        desc: 'Nhập tuổi của một người (số nguyên). Nếu tuổi >= 18 in "DU TUOI CONG DAN", ngược lại in "CHUA DU TUOI".'
+    'NHAPCANH': {
+        title: 'Nhập độ dài cạnh hình vuông hợp lệ (a > 0)',
+        desc: 'Nhập số thực a (float). Dùng vòng lặp while yêu cầu nhập lại nếu a <= 0. Khi nhập đúng cạnh dương thì dừng, in "DA NHAP CANH HINH VUONG" và in a.'
     },
-    'TONGDAN': {
-        title: 'Tính tổng dãy số từ 1 đến n',
-        desc: 'Nhập số nguyên dương n. Dùng vòng lặp for tính tổng S = 1 + 2 + ... + n và in ra "Tong tu 1 den n la: <S>".'
+    'NHAPBANKINH': {
+        title: 'Nhập bán kính hình tròn hợp lệ (r > 0)',
+        desc: 'Nhập số thực r (float). Dùng vòng lặp while yêu cầu nhập lại nếu r <= 0. Khi nhập đúng bán kính dương thì dừng, in "DA NHAP BAN KINH HINH TRON" và in r.'
     },
-    'CUUCHUONG': {
-        title: 'In bảng cửu chương của một số',
-        desc: 'Nhập số nguyên n (từ 1 đến 9). Dùng vòng lặp for in bảng nhân của n từ n x 1 đến n x 10.'
+    'NHAPCHAN': {
+        title: 'Nhập số nguyên chẵn',
+        desc: 'Nhập số nguyên a. Dùng vòng lặp while yêu cầu nhập lại nếu a % 2 != 0. Khi nhập đúng số chẵn thì dừng, in "DA NHAP SO CHAN" và in a.'
     },
-    'SOCHAN': {
-        title: 'In các số chẵn từ 1 đến n',
-        desc: 'Nhập số nguyên dương n. Dùng vòng lặp for in tất cả các số chẵn trong khoảng từ 1 đến n trên cùng một dòng.'
+    'NHAPLE': {
+        title: 'Nhập số nguyên lẻ',
+        desc: 'Nhập số nguyên b. Dùng vòng lặp while yêu cầu nhập lại nếu b % 2 == 0. Khi nhập đúng số lẻ thì dừng, in "DA NHAP SO LE" và in b.'
     },
-    'DEMNGUOC': {
-        title: 'Đếm ngược từ n về 1',
-        desc: 'Nhập số nguyên n. Dùng vòng lặp while in dãy số giảm dần từ n về 1 trên cùng một dòng.'
+    'NHAPLECHUC': {
+        title: 'Nhập số lẻ chục (không chia hết cho 10)',
+        desc: 'Nhập số nguyên c. Dùng vòng lặp while yêu cầu nhập lại nếu c % 10 == 0. Khi nhập đúng số lẻ chục thì dừng, in "DA NHAP SO LE CHUC" và in c.'
     },
-    'TIENVO': {
-        title: 'Tính tiền mua vở theo số lượng',
-        desc: 'Nhập số lượng vở s cần mua. Nếu s >= 10 thì giá là 8000đ/quyển, ngược lại là 10000đ/quyển. In ra "Tong so tien: <tổng tiền>".'
-    },
-    'CHIAHETCHOBA': {
-        title: 'Đếm các số chia hết cho 3 từ 1 đến n',
-        desc: 'Nhập số nguyên dương n. Đếm và in ra số lượng các số chia hết cho 3 trong khoảng từ 1 đến n: "So cac so chia het cho 3 la: <kết quả>".'
+    'NHAPTRONCHUC': {
+        title: 'Nhập số tròn chục (chia hết cho 10)',
+        desc: 'Nhập số nguyên d. Dùng vòng lặp while yêu cầu nhập lại nếu d % 10 != 0. Khi nhập đúng số tròn chục thì dừng, in "DA NHAP SO TRON CHUC" và in d.'
     },
     'NHAPDUONG': {
-        title: 'Kiểm tra nhập số nguyên dương (vòng lặp while)',
-        desc: 'Nhập số nguyên n. Dùng vòng lặp while yêu cầu nhập lại nếu n <= 0. Khi nhập đúng n > 0 thì in ra "DA NHAP DUONG".'
+        title: 'Nhập số nguyên dương (n > 0)',
+        desc: 'Nhập số nguyên n. Dùng vòng lặp while yêu cầu nhập lại nếu n <= 0. Khi nhập đúng số dương thì dừng, in "DA NHAP SO DUONG" và in n.'
+    },
+    'NHAPSOKHAC0': {
+        title: 'Nhập số nguyên khác 0 (n != 0)',
+        desc: 'Nhập số nguyên n. Dùng vòng lặp while yêu cầu nhập lại nếu n == 0. Khi nhập đúng số khác 0 thì dừng, in "DA NHAP SO KHAC 0" và in n.'
+    },
+    'NHAPCHIA5': {
+        title: 'Nhập số nguyên chia hết cho 5',
+        desc: 'Nhập số nguyên n. Dùng vòng lặp while yêu cầu nhập lại nếu n % 5 != 0. Khi nhập đúng số chia hết cho 5 thì dừng, in "DA NHAP SO CHIA HET CHO 5" và in n.'
+    },
+    'NHAPCHIA3': {
+        title: 'Nhập số nguyên chia hết cho 3',
+        desc: 'Nhập số nguyên n. Dùng vòng lặp while yêu cầu nhập lại nếu n % 3 != 0. Khi nhập đúng số chia hết cho 3 thì dừng, in "DA NHAP SO CHIA HET CHO 3" và in n.'
     }
 };
 
@@ -84,9 +92,10 @@ Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể
     const keyLength = GEMINI_API_KEY.length;
 
     const CANDIDATE_MODELS = [
-        'gemini-2.5-flash',
-        'gemini-1.5-flash',
-        'gemini-2.0-flash'
+        'gemini-3.8-flash',
+        'gemini-3.5-flash',
+        'gemini-3.5-flash-lite',
+        'gemini-2.5-flash'
     ];
 
     let lastError = "";
@@ -94,7 +103,7 @@ Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể
     for (const model of CANDIDATE_MODELS) {
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 3500); // 3.5s timeout
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 3.5s timeout
 
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + GEMINI_API_KEY.trim(), {
                 method: 'POST',
