@@ -307,6 +307,20 @@ export default function ExamRoom() {
     return { blocked: false, assignedExam: assignInfo.assignedExam, rowIndex: assignInfo.rowIndex };
   };
 
+  // Tự động nạp code mẫu điền khuyết khi có đề thi
+  useEffect(() => {
+    if (examItem && examItem.templateCode) {
+      try {
+        const savedDraft = localStorage.getItem("draft_code_" + className + "_" + studentName);
+        if (savedDraft && savedDraft.trim() && savedDraft !== "# Viết code tại đây\n") {
+          setCode(savedDraft);
+          return;
+        }
+      } catch(e) {}
+      setCode(examItem.templateCode);
+    }
+  }, [examItem]);
+
   useEffect(() => {
     if (!isExamStarted || isFinished) return;
     const handleVisibility = () => {
@@ -406,6 +420,9 @@ export default function ExamRoom() {
         setExamItem(found.item);
         setTestFolder(found.folder);
         setHasDrawn(true);
+        if (found.item.templateCode && found.item.templateCode.trim()) {
+          setCode(found.item.templateCode);
+        }
         alert(`Hệ thống ghi nhận bạn đã được giao bài: "${found.item.problemName}" (Đã lưu cố định trên Google Sheet).\nKhông thể đổi đề bằng cách tải lại trang!`);
         return;
       }
@@ -433,6 +450,9 @@ export default function ExamRoom() {
     setExamItem(r.item); 
     setTestFolder(r.folder); 
     setHasDrawn(true);
+    if (r.item.templateCode && r.item.templateCode.trim()) {
+      setCode(r.item.templateCode);
+    }
 
     // Tự động đồng bộ mã đề vừa bốc lên cột F tab DanhSachHS trên Google Sheet của Giáo viên!
     fetch('/api/exam-assign', {
@@ -461,6 +481,9 @@ export default function ExamRoom() {
     setIsCheckingStudent(false);
     if (check.blocked) return;
 
+    if (examItem && examItem.templateCode && (!code || code === "# Viết code tại đây\n")) {
+      setCode(examItem.templateCode);
+    }
     document.documentElement.requestFullscreen().then(() => setIsExamStarted(true)).catch(() => setIsExamStarted(true));
   };
 
@@ -790,7 +813,7 @@ export default function ExamRoom() {
                   <span>{className}</span>
                 </div>
               ) : (
-                <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={className} onChange={(e) => {
+                <select className="w-full p-3 bg-white border-2 border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 font-bold cursor-pointer shadow-sm" value={className} onChange={(e) => {
                   const newClass = e.target.value;
                   setClassName(newClass);
                   setHasDrawn(false);
@@ -814,7 +837,7 @@ export default function ExamRoom() {
               ) : (
                 <>
                   {className && studentsData[className] && studentsData[className].length > 0 ? (
-                    <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)}>
+                    <select className="w-full p-3 bg-white border-2 border-indigo-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-slate-800 font-bold cursor-pointer shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)}>
                       {studentsData[className].map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   ) : (
@@ -895,7 +918,25 @@ export default function ExamRoom() {
         <div className="flex-1 flex flex-col gap-4 min-h-0">
           {/* Code editor - full width, giảm kích thước vừa vặn cho bài làm ngắn */}
           <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
-            <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0">Trình soạn thảo Python (Pyodide)</div>
+            <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
+              <span>Trình soạn thảo Python (Pyodide)</span>
+              {examItem?.templateCode && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm("Bạn có chắc muốn khôi phục lại code mẫu điền khuyết ban đầu? Code hiện tại bạn đang viết sẽ bị ghi đè.")) {
+                      setCode(examItem.templateCode || "");
+                    }
+                  }}
+                  disabled={isFinished}
+                  className="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 font-medium px-2 py-0.5 rounded bg-amber-950/40 border border-amber-600/40 hover:bg-amber-900/50"
+                  title="Khôi phục lại code mẫu điền khuyết của đề thi"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                  Khôi phục code mẫu
+                </button>
+              )}
+            </div>
             <Editor
                 height="100%"
                 defaultLanguage="python"
