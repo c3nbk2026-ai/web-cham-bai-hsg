@@ -1055,7 +1055,7 @@ export default function ExamRoom() {
           </div>
           {/* Hàng dưới: Đề thi chiếm ưu thế flex-[1.25] để hiển thị trọn vẹn bảng Test Case */}
           <div className="flex-[1.25] flex gap-4 min-h-0">
-            <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
+            <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-w-0 min-h-0">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Nội dung Đề Thi — {examItem?.problemName}
@@ -1064,11 +1064,11 @@ export default function ExamRoom() {
                 <iframe src={viewerUrl} className="absolute top-0 left-[-10%] w-[120%] h-[calc(100%+38px)] border-0" title="Noi dung de thi" />
               </div>
             </div>
-            <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
+            <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-w-0 min-h-0">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0">Dữ liệu nhập (STDIN)</div>
               <textarea className="w-full flex-1 p-4 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" spellCheck={false} placeholder="Nhập dữ liệu đầu vào để thử..." value={stdin} onChange={e => setStdin(e.target.value)} disabled={isFinished} />
             </div>
-            <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
+            <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-w-0 min-h-0">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0">Kết quả xuất (STDOUT)</div>
               <textarea className={"w-full flex-1 p-4 font-mono text-sm focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Kết quả sẽ hiển thị ở đây sau khi bấm Chạy Code..." value={stdout} />
             </div>
