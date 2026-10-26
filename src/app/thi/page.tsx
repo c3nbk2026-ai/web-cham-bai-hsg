@@ -184,7 +184,33 @@ export default function ExamRoom() {
 
 
   // Hàm thực hiện mở khóa phòng thi từ Giáo viên (xác thực mật khẩu ô B6 tab CauHinh)
-  const handleTeacherUnlock = async () => {
+    // Hàm học sinh hoàn thành ca thi chủ động đăng xuất nhường máy cho thí sinh tiếp theo
+  const handleLogoutForNextStudent = () => {
+    if (!confirm("Xác nhận: Em đã xem xong kết quả bài thi và muốn đăng xuất để nhường máy cho bạn tiếp theo?")) {
+      return;
+    }
+    try {
+      sessionStorage.clear();
+      sessionStorage.removeItem("exam_completed_submission");
+      localStorage.removeItem("exam_device_locked_student");
+      if (className && studentName) {
+        localStorage.removeItem(getAssignedExamKey(className, studentName));
+        localStorage.removeItem("draft_code_" + className + "_" + studentName);
+      }
+    } catch(e) {}
+    setSubmissionSuccessData(null);
+    setIsExamStarted(false);
+    setIsFinished(false);
+    setHasDrawn(false);
+    setExamItem(null);
+    setCode("# Viết code tại đây\n");
+    setStdout("");
+    setStdin("");
+    setViolationCount(0);
+    setIsStudentLocked(false);
+  };
+
+const handleTeacherUnlock = async () => {
     if (!teacherPassInput.trim()) {
       setTeacherUnlockError("Vui lòng nhập mật khẩu Giáo viên!");
       return;
@@ -872,23 +898,32 @@ export default function ExamRoom() {
             </div>
           </div>
 
-          <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-300 text-sm leading-relaxed text-left">
-            <div className="font-bold mb-1 flex items-center gap-1.5">
-              <span>⚠️</span> LƯU Ý DÀNH CHO THÍ SINH:
+          <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-300 text-sm leading-relaxed text-left">
+            <div className="font-bold mb-1 flex items-center gap-1.5 text-emerald-400">
+              <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
+              HOÀN THÀNH BÀI THI:
             </div>
-            Bài làm và kết quả của em đã được đồng bộ an toàn về máy chủ Google Sheets của giáo viên. Mọi thao tác chỉnh sửa đã bị khóa hoàn toàn. Em vui lòng giữ nguyên màn hình này và báo giám thị trước khi rời vị trí.
+            Bài làm và kết quả của em đã được đồng bộ an toàn về máy chủ Google Sheets. Sau khi xem xong kết quả, em hãy bấm nút <b>"Rời phòng thi — Đăng xuất cho bạn tiếp theo"</b> bên dưới để nhường máy.
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800 flex justify-center gap-4">
+          <div className="mt-6 pt-4 border-t border-slate-800 flex flex-col items-center justify-center gap-3">
+            <button 
+              onClick={handleLogoutForNextStudent}
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-emerald-600/30 transition-all transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-emerald-400/30"
+            >
+              <svg className="w-5 h-5 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+              HOÀN THÀNH — ĐĂNG XUẤT CHO BẠN TIẾP THEO
+            </button>
+
             <button 
               onClick={() => {
                 setTeacherPassInput("");
                 setTeacherUnlockError("");
                 setShowTeacherUnlockModal(true);
               }}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-indigo-400 hover:text-indigo-300 font-bold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
+              className="px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-xs text-indigo-400 hover:text-indigo-300 font-semibold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-sm mt-1"
             >
-              <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+              <svg className="w-3.5 h-3.5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
               Giám thị: Mở khóa quyền thi / Chuyển máy cho HS khác
             </button>
           </div>
