@@ -706,8 +706,9 @@ export default function ExamRoom() {
           <div className="mt-6 pt-4 border-t border-slate-800 text-center">
             <button 
               onClick={() => {
-                const code = prompt("DÀNH CHO GIÁM THỊ:\nNhập Mã Phòng Thi để mở khóa quyền thi lại trên máy này:");
-                if (code && examConfig["MaPhongThi"] && code.trim().toUpperCase() === examConfig["MaPhongThi"].trim().toUpperCase()) {
+                const secretCode = prompt("DÀNH CHO GIÁO VIÊN / GIÁM THỊ:\nNhập Mật khẩu Quản trị của Giáo viên để mở khóa:");
+                const targetAdminPass = (examConfig["MatKhauGiamThi"] || examConfig["AdminPassword"] || "admin").trim();
+                if (secretCode && secretCode.trim() === targetAdminPass) {
                   try {
                     localStorage.removeItem("exam_completed_submission");
                     localStorage.removeItem("exam_device_locked_student");
@@ -721,12 +722,12 @@ export default function ExamRoom() {
                   setExamItem(null);
                   alert("Đã mở khóa phòng thi thành công!");
                 } else if (code) {
-                  alert("Mã Phòng Thi không đúng!");
+                  alert("Mật khẩu Giáo viên không đúng!");
                 }
               }}
               className="text-xs text-slate-500 hover:text-indigo-400 transition-colors underline cursor-pointer"
             >
-              Giám thị: Mở khóa quyền thi lại (cần Mã Phòng Thi)
+              Giám thị: Mở khóa quyền thi lại (cần Mật khẩu Giáo viên)
             </button>
           </div>
         </div>
