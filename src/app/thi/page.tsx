@@ -45,6 +45,15 @@ export default function ExamRoom() {
   const [isCheckingCode, setIsCheckingCode] = useState(false);
   const [examConfig, setExamConfig] = useState<any>({});
   const [autoSubmitNotice, setAutoSubmitNotice] = useState<string>("");
+  
+  // State cho Modal Mật khẩu Giáo viên (Bảo mật ô B6 tab CauHinh)
+  const [showTeacherUnlockModal, setShowTeacherUnlockModal] = useState(false);
+  const [teacherPassInput, setTeacherPassInput] = useState("");
+  const [teacherUnlockError, setTeacherUnlockError] = useState("");
+  const [isVerifyingTeacherPass, setIsVerifyingTeacherPass] = useState(false);
+
+  // State cho Modal Khôi phục Code Mẫu (In-app, chống mất Fullscreen)
+  const [showResetCodeModal, setShowResetCodeModal] = useState(false);
 
   // Refs chống Stale Closure và phục vụ tự động nộp bài khi tắt trình duyệt / hết giờ
   const codeRef = useRef(code);
@@ -132,7 +141,7 @@ export default function ExamRoom() {
         studentName: curStudent,
         className: curClass
       };
-      localStorage.setItem("exam_completed_submission", JSON.stringify(successObj));
+      sessionStorage.setItem("exam_completed_submission", JSON.stringify(successObj));
       localStorage.setItem("exam_device_locked_student", curStudent);
       localStorage.removeItem("draft_code_" + curClass + "_" + curStudent);
     } catch(e) {}
@@ -170,12 +179,54 @@ export default function ExamRoom() {
   };
 
 
-  const classes = ["10A1","10A2","10A3","10A4","10A5","10A6","10A7","10A8","10A9","10A10"];
+  // Hàm thực hiện mở khóa phòng thi từ Giáo viên (xác thực mật khẩu ô B6 tab CauHinh)
+  const handleTeacherUnlock = async () => {
+    if (!teacherPassInput.trim()) {
+      setTeacherUnlockError("Vui lòng nhập mật khẩu Giáo viên!");
+      return;
+    }
+    setIsVerifyingTeacherPass(true);
+    setTeacherUnlockError("");
+    try {
+      const res = await fetch("/api/exam-config?t=" + Date.now());
+      const cfg = await res.json();
+      const correctPass = (cfg["MatKhauGiamThi"] || cfg["AdminPassword"] || "gv2026").trim();
+      
+      if (teacherPassInput.trim() === correctPass) {
+        try {
+          sessionStorage.clear();
+          sessionStorage.removeItem("exam_completed_submission");
+          localStorage.removeItem("exam_device_locked_student");
+          if (className && studentName) {
+            localStorage.removeItem(getAssignedExamKey(className, studentName));
+            localStorage.removeItem("draft_code_" + className + "_" + studentName);
+          }
+        } catch(e) {}
+        setSubmissionSuccessData(null);
+        setIsExamStarted(false);
+        setIsFinished(false);
+        setHasDrawn(false);
+        setExamItem(null);
+        setCode("# Viết code tại đây\n");
+        setShowTeacherUnlockModal(false);
+        setTeacherPassInput("");
+        alert("Đã mở khóa phòng thi thành công! Thí sinh có thể chọn tên và bắt đầu thi.");
+      } else {
+        setTeacherUnlockError("Mật khẩu Giáo viên không chính xác (kiểm tra ô B6 tab CauHinh)!");
+      }
+    } catch(e) {
+      setTeacherUnlockError("Lỗi kết nối máy chủ để xác thực mật khẩu!");
+    } finally {
+      setIsVerifyingTeacherPass(false);
+    }
+  };
+
+    const classes = ["10A1","10A2","10A3","10A4","10A5","10A6","10A7","10A8","10A9","10A10"];
 
   useEffect(() => {
-    // 1. Khôi phục trạng thái đã nộp từ localStorage để chống F5
+    // 1. Khôi phục trạng thái đã nộp từ sessionStorage (chỉ trong cùng phiên tab hiện tại, không khóa máy cho học sinh sau)
     try {
-      const savedSub = typeof window !== 'undefined' ? localStorage.getItem("exam_completed_submission") : null;
+      const savedSub = typeof window !== 'undefined' ? sessionStorage.getItem("exam_completed_submission") : null;
       if (savedSub) {
         const parsed = JSON.parse(savedSub);
         if (parsed && parsed.studentName) {
@@ -244,14 +295,7 @@ export default function ExamRoom() {
   };
 
   const checkStudentSubmissionStatus = async (targetStudent: string, targetClass: string) => {
-    // 1. Kiểm tra máy tính này đã dùng nộp bài cho học sinh khác chưa (chống thi giùm trên cùng máy)
-    try {
-      const deviceStudent = localStorage.getItem("exam_device_locked_student");
-      if (deviceStudent && deviceStudent.trim().toLowerCase() !== targetStudent.trim().toLowerCase()) {
-        alert(`CẢNH BÁO: Máy tính này đã được dùng để thi bài cho học sinh "${deviceStudent}". Mỗi học sinh chỉ được làm bài trên máy của mình. Tuyệt đối không được thi giùm bạn!`);
-        return { blocked: true, reason: "DEVICE_LOCKED" };
-      }
-    } catch (e) {}
+    // 1. Cho phép dùng máy chung cho các ca thi khác nhau trong phòng máy (Google Sheets sẽ kiểm soát theo tên từng học sinh)
 
     // 2. Tra cứu tab DanhSachHS (cột F: MaDe) để kiểm tra lệnh mở khóa của Giáo viên
     let assignInfo = { found: false, assignedExam: null as string | null, rowIndex: 0 };
@@ -268,7 +312,7 @@ export default function ExamRoom() {
     // NẾU GIÁO VIÊN ĐÃ XÓA MÃ ĐỀ Ở CỘT F TRÊN TAB DanhSachHS -> MỞ KHÓA CHO PHÉP THI LẠI!
     if (assignInfo.found && !assignInfo.assignedExam) {
       try {
-        localStorage.removeItem("exam_completed_submission");
+        sessionStorage.removeItem("exam_completed_submission");
         localStorage.removeItem("exam_device_locked_student");
         localStorage.removeItem(getAssignedExamKey(targetClass, targetStudent));
       } catch(e) {}
@@ -295,7 +339,7 @@ export default function ExamRoom() {
         };
         setSubmissionSuccessData(subData);
         try {
-          localStorage.setItem("exam_completed_submission", JSON.stringify(subData));
+          sessionStorage.setItem("exam_completed_submission", JSON.stringify(subData));
           localStorage.setItem("exam_device_locked_student", targetStudent);
         } catch(e) {}
         return { blocked: true, reason: "ALREADY_SUBMITTED" };
@@ -665,7 +709,7 @@ export default function ExamRoom() {
       };
       setSubmissionSuccessData(successObj);
       try {
-        localStorage.setItem("exam_completed_submission", JSON.stringify(successObj));
+        sessionStorage.setItem("exam_completed_submission", JSON.stringify(successObj));
         localStorage.setItem("exam_device_locked_student", studentName);
       } catch(e) {}
     }
@@ -727,31 +771,17 @@ export default function ExamRoom() {
             Bài làm và kết quả của em đã được đồng bộ an toàn về máy chủ Google Sheets của giáo viên. Mọi thao tác chỉnh sửa đã bị khóa hoàn toàn. Em vui lòng giữ nguyên màn hình này và báo giám thị trước khi rời vị trí.
           </div>
 
-          <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+          <div className="mt-6 pt-4 border-t border-slate-800 flex justify-center gap-4">
             <button 
               onClick={() => {
-                const secretCode = prompt("DÀNH CHO GIÁO VIÊN / GIÁM THỊ:\nNhập Mật khẩu Quản trị của Giáo viên để mở khóa:");
-                const targetAdminPass = (examConfig["MatKhauGiamThi"] || examConfig["AdminPassword"] || "admin").trim();
-                if (secretCode && secretCode.trim() === targetAdminPass) {
-                  try {
-                    localStorage.removeItem("exam_completed_submission");
-                    localStorage.removeItem("exam_device_locked_student");
-                    localStorage.removeItem(getAssignedExamKey(className, studentName));
-    localStorage.removeItem("draft_code_" + className + "_" + studentName);
-                  } catch(e) {}
-                  setSubmissionSuccessData(null);
-                  setIsExamStarted(false);
-                  setIsFinished(false);
-                  setHasDrawn(false);
-                  setExamItem(null);
-                  alert("Đã mở khóa phòng thi thành công!");
-                } else if (code) {
-                  alert("Mật khẩu Giáo viên không đúng!");
-                }
+                setTeacherPassInput("");
+                setTeacherUnlockError("");
+                setShowTeacherUnlockModal(true);
               }}
-              className="text-xs text-slate-500 hover:text-indigo-400 transition-colors underline cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs text-indigo-400 hover:text-indigo-300 font-bold border border-slate-700 transition-all flex items-center gap-1.5 cursor-pointer shadow-md"
             >
-              Giám thị: Mở khóa quyền thi lại (cần Mật khẩu Giáo viên)
+              <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+              Giám thị: Mở khóa quyền thi / Chuyển máy cho HS khác
             </button>
           </div>
         </div>
@@ -916,20 +946,16 @@ export default function ExamRoom() {
           </div>
         </div>
         <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* Code editor - full width, giảm kích thước vừa vặn cho bài làm ngắn */}
-          <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+          {/* Code editor - tăng chiều cao lên flex-[1.4] để hiển thị trọn vẹn toàn bộ các dòng code mẫu */}
+          <div className="flex-[1.4] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
               <span>Trình soạn thảo Python (Pyodide)</span>
               {examItem?.templateCode && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (confirm("Bạn có chắc muốn khôi phục lại code mẫu điền khuyết ban đầu? Code hiện tại bạn đang viết sẽ bị ghi đè.")) {
-                      setCode(examItem.templateCode || "");
-                    }
-                  }}
+                  onClick={() => setShowResetCodeModal(true)}
                   disabled={isFinished}
-                  className="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 font-medium px-2 py-0.5 rounded bg-amber-950/40 border border-amber-600/40 hover:bg-amber-900/50"
+                  className="text-amber-400 hover:text-amber-300 text-xs flex items-center gap-1.5 transition-colors disabled:opacity-50 font-medium px-2.5 py-1 rounded-lg bg-amber-950/40 border border-amber-600/40 hover:bg-amber-900/50 cursor-pointer"
                   title="Khôi phục lại code mẫu điền khuyết của đề thi"
                 >
                   <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
@@ -951,16 +977,17 @@ export default function ExamRoom() {
                 }}
                 options={{
                   minimap: { enabled: false },
-                  fontSize: 16,
+                  fontSize: 15,
+                  lineHeight: 22,
                   wordWrap: 'on',
                   readOnly: isFinished,
                   scrollBeyondLastLine: false,
-                  padding: { top: 16 }
+                  padding: { top: 8, bottom: 8 }
                 }}
               />
           </div>
-          {/* Hàng dưới: Đề thi chiếm ưu thế không gian để đọc rõ ràng + STDIN + STDOUT */}
-          <div className="flex-[2] flex gap-4 min-h-0">
+          {/* Hàng dưới: Đề thi + STDIN + STDOUT */}
+          <div className="flex-1 flex gap-4 min-h-0">
             <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
@@ -981,6 +1008,111 @@ export default function ExamRoom() {
           </div>
         </div>
       </div>
+      {/* MODAL 1: Mở khóa Giáo viên (Mật khẩu ô B6 tab CauHinh) */}
+      {showTeacherUnlockModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-3xl p-6 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Xác thực Giáo viên / Giám thị</h3>
+                <p className="text-xs text-slate-400">Mật khẩu quy định tại ô B6 tab CauHinh</p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-300 mb-4 bg-slate-800/80 p-3 rounded-xl border border-slate-700/50">
+              Nhập Mật khẩu Giáo viên để mở khóa máy tính cho học sinh thi lại hoặc chuyển máy cho thí sinh ca sau.
+            </p>
+
+            <div className="space-y-3 mb-5">
+              <input 
+                type="password" 
+                autoFocus
+                placeholder="Nhập mật khẩu Giáo viên..." 
+                value={teacherPassInput}
+                onChange={e => {
+                  setTeacherPassInput(e.target.value);
+                  setTeacherUnlockError("");
+                }}
+                onKeyDown={e => e.key === 'Enter' && handleTeacherUnlock()}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-3 text-white text-base focus:outline-none focus:border-indigo-500 shadow-inner"
+              />
+              {teacherUnlockError && (
+                <div className="text-xs font-bold text-rose-400 bg-rose-500/10 border border-rose-500/20 p-2.5 rounded-lg">
+                  {teacherUnlockError}
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end gap-3">
+              <button 
+                type="button"
+                onClick={() => {
+                  setShowTeacherUnlockModal(false);
+                  setTeacherPassInput("");
+                  setTeacherUnlockError("");
+                }}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                type="button"
+                onClick={handleTeacherUnlock}
+                disabled={isVerifyingTeacherPass}
+                className="px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white font-bold text-sm shadow-lg shadow-indigo-600/30 transition-transform active:scale-95 cursor-pointer flex items-center gap-2"
+              >
+                {isVerifyingTeacherPass ? "Đang xác thực..." : "Xác nhận mở khóa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL 2: Xác nhận Khôi phục Code Mẫu (In-app, nằm trọn vẹn trong Fullscreen) */}
+      {showResetCodeModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-amber-500/40 rounded-3xl p-6 max-w-md w-full shadow-2xl relative animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-2xl bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-bold text-white">Khôi phục code mẫu ban đầu?</h3>
+                <p className="text-xs text-amber-400 font-medium">Đề thi: {examItem?.problemName}</p>
+              </div>
+            </div>
+
+            <p className="text-sm text-slate-300 mb-6 bg-slate-800/80 p-3.5 rounded-xl border border-slate-700/50 leading-relaxed">
+              Toàn bộ code bạn đang viết sẽ được làm mới lại theo khung code mẫu điền khuyết ban đầu của đề thi. Bạn có muốn tiếp tục?
+            </p>
+
+            <div className="flex justify-end gap-3">
+              <button 
+                type="button"
+                onClick={() => setShowResetCodeModal(false)}
+                className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold text-sm transition-colors cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  if (examItem?.templateCode) {
+                    setCode(examItem.templateCode);
+                  }
+                  setShowResetCodeModal(false);
+                }}
+                className="px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-sm shadow-lg shadow-amber-500/30 transition-transform active:scale-95 cursor-pointer"
+              >
+                Đồng ý khôi phục
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
