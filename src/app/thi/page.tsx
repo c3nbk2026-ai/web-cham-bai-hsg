@@ -489,9 +489,12 @@ export default function ExamRoom() {
       console.error("Lỗi kiểm tra mã đề trên DanhSachHS:", err);
     }
 
-    // NẾU GIÁO VIÊN ĐÃ XÓA MÃ ĐỀ Ở CỘT F TRÊN TAB DanhSachHS -> MỞ KHÓA CHO PHÉP THI LẠI!
-    if (assignInfo.found && !assignInfo.assignedExam) {
+    // NẾU GIÁO VIÊN ĐÃ XÓA MÃ ĐỀ Ở CỘT F TRÊN TAB DanhSachHS HOẶC ĐÃ ĐƯỢC MỞ KHÓA -> CHO PHÉP THI LẠI!
+    const isRetestUnlocked = typeof window !== "undefined" && sessionStorage.getItem("exam_retest_unlocked") === (targetStudent || "").trim().toLowerCase();
+
+    if ((assignInfo.found && !assignInfo.assignedExam) || isRetestUnlocked) {
       try {
+        sessionStorage.setItem("exam_retest_unlocked", (targetStudent || "").trim().toLowerCase());
         sessionStorage.removeItem("exam_completed_submission");
         localStorage.removeItem("exam_device_locked_student");
         localStorage.removeItem(getAssignedExamKey(targetClass, targetStudent));
@@ -669,32 +672,72 @@ export default function ExamRoom() {
     } catch(e) {}
   };
 
-  // Tự động khôi phục đề thi đã bốc khi học sinh chọn lại tên hoặc F5 trang (luôn đối chiếu với structure mới nhất từ server)
+  // Tự động đối chiếu với Google Sheet (cột F) khi học sinh chọn tên hoặc F5 trang
   useEffect(() => {
     if (!className || !studentName || Object.keys(structure).length === 0) return;
-    try {
-      const savedExamStr = localStorage.getItem(getAssignedExamKey(className, studentName));
-      if (savedExamStr) {
-        const savedExam = JSON.parse(savedExamStr);
-        const pName = savedExam?.item?.problemName || savedExam?.problemName;
-        if (pName) {
-          const freshExam = findExamByProblemName(pName);
+    let isCancelled = false;
+
+    const syncExamAssignment = async () => {
+      try {
+        const resAssign = await fetch(`/api/exam-assign?studentName=${encodeURIComponent(studentName)}&className=${encodeURIComponent(className)}&t=${Date.now()}`);
+        const assignData = await resAssign.json();
+        if (isCancelled) return;
+
+        // 1. NẾU GIÁO VIÊN ĐÃ XÓA MÃ ĐỀ Ở CỘT F (để mở khóa thi lại hoặc chưa bốc đề bao giờ):
+        if (assignData.found && !assignData.assignedExam) {
+          try {
+            localStorage.removeItem(getAssignedExamKey(className, studentName));
+            localStorage.removeItem("draft_code_" + className + "_" + studentName);
+            localStorage.removeItem("exam_end_time_" + className + "_" + studentName.trim().toLowerCase());
+            sessionStorage.removeItem("exam_completed_submission");
+            sessionStorage.setItem("exam_retest_unlocked", studentName.trim().toLowerCase());
+          } catch(e) {}
+          setHasDrawn(false);
+          setExamItem(null);
+          setSubmissionSuccessData(null);
+          return;
+        }
+
+        // 2. NẾU CỘT F TRÊN GOOGLE SHEET ĐÃ CÓ MÃ ĐỀ: Cố định đúng mã đề đó!
+        if (assignData.found && assignData.assignedExam) {
+          const freshExam = findExamByProblemName(assignData.assignedExam);
           if (freshExam) {
             setExamItem(freshExam.item);
             setTestFolder(freshExam.folder);
             setHasDrawn(true);
             loadSampleInput(freshExam.item, freshExam.folder);
             return;
-          } else {
-            // Đề cũ (như INSOGIAM1) không còn trong ngân hàng đề -> xóa cache rác
-            localStorage.removeItem(getAssignedExamKey(className, studentName));
-            localStorage.removeItem("draft_code_" + className + "_" + studentName);
           }
         }
+      } catch(err) {
+        console.warn("Lỗi kiểm tra mã đề từ máy chủ:", err);
       }
-    } catch(e) {}
-    setHasDrawn(false);
-    setExamItem(null);
+
+      // 3. Fallback kiểm tra localStorage nếu mất kết nối mạng
+      try {
+        const savedExamStr = localStorage.getItem(getAssignedExamKey(className, studentName));
+        if (savedExamStr) {
+          const savedExam = JSON.parse(savedExamStr);
+          const pName = savedExam?.item?.problemName || savedExam?.problemName;
+          if (pName) {
+            const freshExam = findExamByProblemName(pName);
+            if (freshExam) {
+              setExamItem(freshExam.item);
+              setTestFolder(freshExam.folder);
+              setHasDrawn(true);
+              loadSampleInput(freshExam.item, freshExam.folder);
+              return;
+            }
+          }
+        }
+      } catch(e) {}
+
+      setHasDrawn(false);
+      setExamItem(null);
+    };
+
+    syncExamAssignment();
+    return () => { isCancelled = true; };
   }, [className, studentName, structure]);
 
   const drawExam = async () => {
@@ -772,13 +815,16 @@ export default function ExamRoom() {
   const startExam = async () => {
     if (!studentName) return alert("Vui lòng chọn tên học sinh!");
     if (!examItem) return alert("Vui lòng bốc thăm đề thi trước!");
-    setIsCheckingStudent(true);
-    const check = await checkStudentSubmissionStatus(studentName, className);
-    setIsCheckingStudent(false);
-    if (check.blocked) return;
+    // Nếu chưa từng bốc đề trong phiên thì mới kiểm tra trạng thái thí sinh
+    if (!hasDrawn) {
+      setIsCheckingStudent(true);
+      const check = await checkStudentSubmissionStatus(studentName, className);
+      setIsCheckingStudent(false);
+      if (check.blocked) return;
+    }
 
-    if (examItem && examItem.templateCode && (!code || code === "# Viết code tại đây\n")) {
-      setCode(examItem.templateCode);
+    if (examItem && examItem.templateCode && (!code || code === "# Viết code tại đây\n" || code.includes("# ĐỀ SỐ"))) {
+      setCode(cleanTemplateCode(examItem.templateCode));
     }
 
     // ĐẢM BẢO QUYỀN LỢI THỜI GIAN THI CHO CA 2 THEO ĐÚNG TAB CAUHINH TRÊN GOOGLE SHEETS
