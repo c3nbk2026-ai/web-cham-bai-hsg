@@ -953,25 +953,35 @@ export default function ExamRoom() {
       });
     } catch(e) {}
 
+    const isRetestUnlocked = typeof window !== "undefined" && sessionStorage.getItem("exam_retest_unlocked") === studentName.trim().toLowerCase();
+
     let currentRemaining = totalSeconds;
     try {
-      const savedEndTime = localStorage.getItem(timerKey);
-      if (savedEndTime) {
-        const diff = Math.floor((parseInt(savedEndTime, 10) - Date.now()) / 1000);
-        // Nếu chính thí sinh này đang làm dở mà bị F5/reload: giữ nguyên số giây còn lại của thí sinh này
-        if (diff > 5 && diff <= totalSeconds) {
-          currentRemaining = diff;
+      if (isRetestUnlocked) {
+        // Thí sinh được Giáo viên mở khóa cho thi lại: CẤP MỚI TRỌN VẸN 100% THỜI GIAN THI!
+        const newEndTime = Date.now() + totalSeconds * 1000;
+        localStorage.setItem(timerKey, newEndTime.toString());
+        sessionStorage.removeItem("exam_retest_unlocked");
+        currentRemaining = totalSeconds;
+      } else {
+        const savedEndTime = localStorage.getItem(timerKey);
+        if (savedEndTime) {
+          const diff = Math.floor((parseInt(savedEndTime, 10) - Date.now()) / 1000);
+          // Nếu chính thí sinh này đang làm dở mà bị F5/reload: giữ nguyên số giây còn lại
+          if (diff > 5 && diff <= totalSeconds) {
+            currentRemaining = diff;
+          } else {
+            // Nếu mốc cũ đã hết hoặc không hợp lệ: cấp mới thời gian thi
+            const newEndTime = Date.now() + totalSeconds * 1000;
+            localStorage.setItem(timerKey, newEndTime.toString());
+            currentRemaining = totalSeconds;
+          }
         } else {
-          // Nếu mốc cũ đã hết hoặc không hợp lệ: cấp mới trọn vẹn 100% thời gian thi quy định từ tab CauHinh
+          // Lần đầu vào thi: cấp mới thời gian thi
           const newEndTime = Date.now() + totalSeconds * 1000;
           localStorage.setItem(timerKey, newEndTime.toString());
           currentRemaining = totalSeconds;
         }
-      } else {
-        // Lần đầu thí sinh ca mới vào thi: cấp mới trọn vẹn 100% thời gian thi từ tab CauHinh
-        const newEndTime = Date.now() + totalSeconds * 1000;
-        localStorage.setItem(timerKey, newEndTime.toString());
-        currentRemaining = totalSeconds;
       }
     } catch(e) {
       currentRemaining = totalSeconds;
@@ -1531,22 +1541,7 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
           </div>
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end mr-4">
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (confirm(`Bạn có muốn cấp lại đủ ${examConfig?.["ThoiGianThi"] || 15} phút làm bài không?`)) {
-                      resetTimerToFull();
-                    }
-                  }}
-                  className="text-[10px] text-cyan-300 hover:text-white bg-slate-700/80 hover:bg-slate-700 px-2 py-1 rounded-lg border border-slate-600 transition-colors flex items-center gap-1 cursor-pointer font-semibold shadow-sm"
-                  title="Nhấn để cấp lại trọn vẹn thời gian thi"
-                >
-                  <svg className="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                  Cấp lại 15p
-                </button>
-                <div className={"text-3xl font-mono font-black " + (timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400')}>{formatTime(timeLeft)}</div>
-              </div>
+              <div className={"text-3xl font-mono font-black " + (timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400')}>{formatTime(timeLeft)}</div>
               <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Quy định: {examConfig?.["ThoiGianThi"] || 15} phút</div>
             </div>
             <button onClick={runCode} disabled={isLoading || isFinished} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-900 transition-all disabled:opacity-50">
