@@ -14,79 +14,91 @@ interface ExamItem {
   templateCode?: string; // Code mẫu điền khuyết
 }
 
-// BẢNG DỮ LIỆU ĐỀ THI GỐC (RENDER TRỰC TIẾP CHỮ TO RÕ NÉT, THAY THẾ IFRAME WORD BÉ LI TI)
-const EXAM_PREVIEW_DATA: Record<string, { title: string; desc: string; sampleIn: string; sampleOut: string }> = {
+// BẢNG DỮ LIỆU ĐỀ THI GỐC (RENDER TRỰC TIẾP CHỮ TO RÕ NÉT, TÁCH BẠCH 2 DÒNG OUTPUT ĐẦU RA)
+const EXAM_PREVIEW_DATA: Record<string, { title: string; desc: string; sampleIn: string; outLine1: string; outLine2: string }> = {
   "NHAPAM": {
     title: "ĐỀ SỐ 01: ĐIỀU KHIỂN NHẬP SỐ NGUYÊN ÂM",
-    desc: "Viết chương trình yêu cầu nhập một số nguyên âm x từ bàn phím (kiểu int). Nếu người dùng nhập số không phải là số âm thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số nguyên âm thì dừng và in ra màn hình: DA NHAP SO AM.",
+    desc: "Viết chương trình yêu cầu nhập một số nguyên âm x từ bàn phím (kiểu int). Nếu người dùng nhập số không phải là số âm thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số nguyên âm thì dừng và in ra thông báo cùng giá trị x.",
     sampleIn: "5 3 2 -1",
-    sampleOut: "DA NHAP SO AM và -1"
+    outLine1: "DA NHAP SO AM",
+    outLine2: "-1"
   },
   "NHAPKHONGAM": {
     title: "ĐỀ SỐ 02: ĐIỀU KHIỂN NHẬP SỐ NGUYÊN KHÔNG ÂM",
-    desc: "Viết chương trình yêu cầu nhập một số nguyên không âm y từ bàn phím (kiểu int). Nếu người dùng nhập số âm thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số không âm thì dừng và in ra màn hình: DA NHAP SO KHONG AM.",
+    desc: "Viết chương trình yêu cầu nhập một số nguyên không âm y từ bàn phím (kiểu int). Nếu người dùng nhập số âm thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số không âm thì dừng và in ra thông báo cùng giá trị y.",
     sampleIn: "-5 -1 -3 4",
-    sampleOut: "DA NHAP SO KHONG AM và 4"
+    outLine1: "DA NHAP SO KHONG AM",
+    outLine2: "4"
   },
   "NHAPCANH": {
     title: "ĐỀ SỐ 03: NHẬP CẠNH HÌNH VUÔNG",
-    desc: "Viết chương trình nhập vào độ dài cạnh của một hình vuông a từ bàn phím (kiểu số thực float). Nếu độ dài cạnh không hợp lệ (không phải số dương) thì phải yêu cầu nhập lại liên tục cho đến khi nhận được giá trị hợp lệ thì dừng và in ra màn hình: DA NHAP CANH HINH VUONG.",
+    desc: "Viết chương trình nhập vào độ dài cạnh của một hình vuông a từ bàn phím (kiểu float). Nếu độ dài cạnh không hợp lệ (không phải số dương) thì phải yêu cầu nhập lại liên tục cho đến khi nhận được giá trị hợp lệ thì dừng và in ra thông báo cùng giá trị a.",
     sampleIn: "-5.0 -2.0 -1.0 3.0",
-    sampleOut: "DA NHAP CANH HINH VUONG và 3.0"
+    outLine1: "DA NHAP CANH HINH VUONG",
+    outLine2: "3.0"
   },
   "NHAPBANKINH": {
     title: "ĐỀ SỐ 04: NHẬP BÁN KÍNH HÌNH TRÒN",
-    desc: "Viết chương trình nhập vào bán kính của một hình tròn r từ bàn phím (kiểu số thực float). Nếu bán kính không hợp lệ (không phải số dương) thì phải yêu cầu nhập lại liên tục cho đến khi nhận được giá trị hợp lệ thì dừng và in ra màn hình: DA NHAP BAN KINH HINH TRON.",
+    desc: "Viết chương trình nhập vào bán kính của một hình tròn r từ bàn phím (kiểu float). Nếu bán kính không hợp lệ (không phải số dương) thì phải yêu cầu nhập lại liên tục cho đến khi nhận được giá trị hợp lệ thì dừng và in ra thông báo cùng giá trị r.",
     sampleIn: "-5.0 -2.0 -1.0 3.0",
-    sampleOut: "DA NHAP BAN KINH HINH TRON và 3.0"
+    outLine1: "DA NHAP BAN KINH HINH TRON",
+    outLine2: "3.0"
   },
   "NHAPCHAN": {
     title: "ĐỀ SỐ 05: NHẬP SỐ CHẴN",
-    desc: "Viết chương trình yêu cầu nhập vào một số nguyên chẵn a từ bàn phím (kiểu int). Nếu người dùng nhập số lẻ thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số chẵn thì dừng và in ra màn hình: DA NHAP SO CHAN.",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên chẵn a từ bàn phím (kiểu int). Nếu người dùng nhập số lẻ thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số chẵn thì dừng và in ra thông báo cùng giá trị a.",
     sampleIn: "5 3 -7 2",
-    sampleOut: "DA NHAP SO CHAN và 2"
+    outLine1: "DA NHAP SO CHAN",
+    outLine2: "2"
   },
   "NHAPLE": {
     title: "ĐỀ SỐ 06: NHẬP SỐ LẺ",
-    desc: "Viết chương trình yêu cầu nhập vào một số nguyên lẻ b từ bàn phím (kiểu int). Nếu người dùng nhập số chẵn thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số lẻ thì dừng và in ra màn hình: DA NHAP SO LE.",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên lẻ b từ bàn phím (kiểu int). Nếu người dùng nhập số chẵn thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số lẻ thì dừng và in ra thông báo cùng giá trị b.",
     sampleIn: "6 2 -4 1",
-    sampleOut: "DA NHAP SO LE và 1"
+    outLine1: "DA NHAP SO LE",
+    outLine2: "1"
   },
   "NHAPLECHUC": {
     title: "ĐỀ SỐ 07: NHẬP SỐ LẺ CHỤC (không chia hết cho 10)",
-    desc: "Viết chương trình yêu cầu nhập vào một số lẻ chục c từ bàn phím (số nguyên không chia hết cho 10, kiểu int). Nếu người dùng nhập số tròn chục thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số lẻ chục thì dừng và in ra màn hình: DA NHAP SO LE CHUC.",
+    desc: "Viết chương trình yêu cầu nhập vào một số lẻ chục c từ bàn phím (số nguyên không chia hết cho 10, kiểu int). Nếu người dùng nhập số tròn chục thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số lẻ chục thì dừng và in ra thông báo cùng giá trị c.",
     sampleIn: "60 20 -30 11",
-    sampleOut: "DA NHAP SO LE CHUC và 11"
+    outLine1: "DA NHAP SO LE CHUC",
+    outLine2: "11"
   },
   "NHAPTRONCHUC": {
     title: "ĐỀ SỐ 08: NHẬP SỐ TRÒN CHỤC",
-    desc: "Viết chương trình yêu cầu nhập vào một số tròn chục d từ bàn phím (số nguyên chia hết cho 10, kiểu int). Nếu người dùng nhập số không tròn chục thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số tròn chục thì dừng và in ra màn hình: DA NHAP SO TRON CHUC.",
+    desc: "Viết chương trình yêu cầu nhập vào một số tròn chục d từ bàn phím (số nguyên chia hết cho 10, kiểu int). Nếu người dùng nhập số không tròn chục thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số tròn chục thì dừng và in ra thông báo cùng giá trị d.",
     sampleIn: "6 2 -7 10",
-    sampleOut: "DA NHAP SO TRON CHUC và 10"
+    outLine1: "DA NHAP SO TRON CHUC",
+    outLine2: "10"
   },
   "NHAPDUONG": {
     title: "ĐỀ SỐ 09: NHẬP SỐ NGUYÊN DƯƠNG",
-    desc: "Viết chương trình yêu cầu nhập vào một số nguyên dương n từ bàn phím (kiểu int). Nếu người dùng nhập số không phải là số dương thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số nguyên dương thì dừng và in ra màn hình: DA NHAP SO DUONG.",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên dương n từ bàn phím (kiểu int). Nếu người dùng nhập số không phải là số dương thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số nguyên dương thì dừng và in ra thông báo cùng giá trị n.",
     sampleIn: "-5 -3 -1 7",
-    sampleOut: "DA NHAP SO DUONG và 7"
+    outLine1: "DA NHAP SO DUONG",
+    outLine2: "7"
   },
   "NHAPSOKHAC0": {
     title: "ĐỀ SỐ 10: NHẬP SỐ KHÁC 0",
-    desc: "Viết chương trình yêu cầu nhập vào một số nguyên khác 0 n từ bàn phím (kiểu int). Nếu người dùng nhập số 0 thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số khác 0 thì dừng và in ra màn hình: DA NHAP SO KHAC 0.",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên khác 0 n từ bàn phím (kiểu int). Nếu người dùng nhập số 0 thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số khác 0 thì dừng và in ra thông báo cùng giá trị n.",
     sampleIn: "0 0 5",
-    sampleOut: "DA NHAP SO KHAC 0 và 5"
+    outLine1: "DA NHAP SO KHAC 0",
+    outLine2: "5"
   },
   "NHAPCHIA5": {
     title: "ĐỀ SỐ 11: NHẬP SỐ CHIA HẾT CHO 5",
-    desc: "Viết chương trình yêu cầu nhập vào một số nguyên chia hết cho 5 n từ bàn phím (kiểu int). Nếu người dùng nhập số không chia hết cho 5 thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số chia hết cho 5 thì dừng và in ra màn hình: DA NHAP SO CHIA HET CHO 5.",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên chia hết cho 5 n từ bàn phím (kiểu int). Nếu người dùng nhập số không chia hết cho 5 thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số chia hết cho 5 thì dừng và in ra thông báo cùng giá trị n.",
     sampleIn: "7 13 -8 25",
-    sampleOut: "DA NHAP SO CHIA HET CHO 5 và 25"
+    outLine1: "DA NHAP SO CHIA HET CHO 5",
+    outLine2: "25"
   },
   "NHAPCHIA3": {
     title: "ĐỀ SỐ 12: NHẬP SỐ CHIA HẾT CHO 3",
-    desc: "Viết chương trình yêu cầu nhập vào một số nguyên chia hết cho 3 n từ bàn phím (kiểu int). Nếu người dùng nhập số không chia hết cho 3 thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số chia hết cho 3 thì dừng và in ra màn hình: DA NHAP SO CHIA HET CHO 3.",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên chia hết cho 3 n từ bàn phím (kiểu int). Nếu người dùng nhập số không chia hết cho 3 thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số chia hết cho 3 thì dừng và in ra thông báo cùng giá trị n.",
     sampleIn: "8 10 -7 9",
-    sampleOut: "DA NHAP SO CHIA HET CHO 3 và 9"
+    outLine1: "DA NHAP SO CHIA HET CHO 3",
+    outLine2: "9"
   }
 };
 
@@ -628,13 +640,25 @@ export default function ExamRoom() {
     for (const line of lines) {
       if (line.startsWith("# ĐỀ SỐ") || line.startsWith("# Điền biểu thức")) continue;
       if (line.includes("# Bước 2:") || line.includes("ĐIỀN ĐIỀU KIỆN")) {
-        cleaned.push("# 👇 ĐIỀN ĐIỀU KIỆN LẶP VÀO DẤU ... DƯỚI ĐÂY:");
+        cleaned.push("# 👇 ĐIỀN ĐIỀU KIỆN LẶP DƯỚI ĐÂY:");
         continue;
       }
       if (line.startsWith("# Bước 1:") || line.startsWith("# Bước 3:")) continue;
       cleaned.push(line);
     }
     return cleaned.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+  };
+
+  // HÀM LÀM MỚI VÀ CẤP ĐỦ 100% THỜI GIAN THI QUY ĐỊNH (15 PHÚT)
+  const resetTimerToFull = () => {
+    const durationMinutes = parseInt(examConfig["ThoiGianThi"] || "15", 10) || 15;
+    const totalSeconds = durationMinutes * 60;
+    const timerKey = "exam_end_time_" + className + "_" + (studentName || "").trim().toLowerCase();
+    try {
+      const newEndTime = Date.now() + totalSeconds * 1000;
+      localStorage.setItem(timerKey, newEndTime.toString());
+    } catch(e) {}
+    setTimeLeft(totalSeconds);
   };
 
   // Tự động nạp code mẫu điền khuyết khi có đề thi (chỉ khôi phục bản nháp khi học sinh đang thi bị F5)
@@ -972,14 +996,15 @@ export default function ExamRoom() {
   const runCode = async () => {
     if (!code.trim()) return;
 
-    // 0. Kiểm tra nếu học sinh chưa điền điều kiện lặp (vẫn còn dấu ba chấm "...")
+    // 0. Kiểm tra nếu học sinh chưa điền điều kiện lặp (vẫn còn dấu ba chấm "..." trong chính câu lệnh while)
     const lines = code.split("\n");
     const hasEllipsisInWhile = lines.some(l => {
       const trimmed = l.trim();
+      if (trimmed.startsWith("#")) return false; // Tuyệt đối bỏ qua dòng chú thích
       return trimmed.startsWith("while") && (trimmed.includes("...") || trimmed.includes("…"));
     });
 
-    if (hasEllipsisInWhile || (code.includes("...") && code.includes("while"))) {
+    if (hasEllipsisInWhile) {
       setIsOutputError(true);
       setStdout(
         "⚠️ BẠN CHƯA ĐIỀN ĐIỀU KIỆN LẶP CHO VÒNG LẶP 'while':\n\n" +
@@ -1127,9 +1152,10 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
       const lines = code.split("\n");
       const hasEllipsisInWhile = lines.some(l => {
         const trimmed = l.trim();
+        if (trimmed.startsWith("#")) return false; // Tuyệt đối bỏ qua dòng chú thích
         return trimmed.startsWith("while") && (trimmed.includes("...") || trimmed.includes("…"));
       });
-      if (hasEllipsisInWhile || (code.includes("...") && code.includes("while"))) {
+      if (hasEllipsisInWhile) {
         if (!confirm("⚠️ CẢNH BÁO: Dòng lệnh 'while' của bạn VẪN CÒN DẤU BA CHẤM '...' (chưa điền điều kiện lặp)!\n\nNếu nộp bài lúc này, bài thi sẽ bị 0 điểm. Bạn có chắc chắn muốn nộp không?")) {
           return;
         }
@@ -1505,8 +1531,23 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
           </div>
           <div className="flex items-center gap-4">
             <div className="flex flex-col items-end mr-4">
-              <div className={"text-3xl font-mono font-black " + (timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400')}>{formatTime(timeLeft)}</div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Quy định: {examConfig?.["ThoiGianThi"] || 45} phút</div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (confirm(`Bạn có muốn cấp lại đủ ${examConfig?.["ThoiGianThi"] || 15} phút làm bài không?`)) {
+                      resetTimerToFull();
+                    }
+                  }}
+                  className="text-[10px] text-cyan-300 hover:text-white bg-slate-700/80 hover:bg-slate-700 px-2 py-1 rounded-lg border border-slate-600 transition-colors flex items-center gap-1 cursor-pointer font-semibold shadow-sm"
+                  title="Nhấn để cấp lại trọn vẹn thời gian thi"
+                >
+                  <svg className="w-3 h-3 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                  Cấp lại 15p
+                </button>
+                <div className={"text-3xl font-mono font-black " + (timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400')}>{formatTime(timeLeft)}</div>
+              </div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Quy định: {examConfig?.["ThoiGianThi"] || 15} phút</div>
             </div>
             <button onClick={runCode} disabled={isLoading || isFinished} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-900 transition-all disabled:opacity-50">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -1615,22 +1656,26 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
                     </div>
 
                     <div className="p-3.5 bg-emerald-950/40 border border-emerald-500/50 rounded-xl">
-                      <div className="text-emerald-400 font-bold mb-1.5 flex items-center gap-2" style={{ fontSize: `${examFontSize}px` }}>
+                      <div className="text-emerald-400 font-bold mb-2 flex items-center gap-2" style={{ fontSize: `${examFontSize}px` }}>
                         <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
                         Ví dụ Test Case mẫu:
                       </div>
-                      <div className="font-mono text-emerald-300 font-semibold space-y-1.5" style={{ fontSize: `${examFontSize}px` }}>
+                      <div className="space-y-2" style={{ fontSize: `${examFontSize}px` }}>
                         <div className="flex items-center gap-2 flex-wrap">
-                          <span>👉 <b>Đầu vào (Input):</b></span>
-                          <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-700 text-amber-300 font-bold tracking-wide">
+                          <span className="text-slate-300 font-medium">👉 <b>Đầu vào (Input):</b></span>
+                          <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-700 text-amber-300 font-mono font-bold tracking-wide">
                             {EXAM_PREVIEW_DATA[examItem.problemName].sampleIn}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span>👉 <b>Đầu ra (Output):</b></span>
-                          <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-emerald-500/40 text-emerald-300 font-bold tracking-wide">
-                            {EXAM_PREVIEW_DATA[examItem.problemName].sampleOut}
-                          </span>
+                        <div className="text-slate-300 font-medium">
+                          <div className="mb-1">👉 <b>Kết quả in ra màn hình (Output gồm 2 dòng):</b></div>
+                          <div className="bg-slate-950/90 p-2.5 rounded-lg border border-emerald-500/40 text-emerald-300 font-mono text-sm leading-relaxed space-y-0.5">
+                            <div>{EXAM_PREVIEW_DATA[examItem.problemName].outLine1}</div>
+                            <div className="text-amber-300 font-bold flex items-center gap-2">
+                              <span>{EXAM_PREVIEW_DATA[examItem.problemName].outLine2}</span>
+                              <span className="text-[11px] text-slate-400 font-sans font-normal">(giá trị biến hợp lệ được in ra)</span>
+                            </div>
+                          </div>
                         </div>
                       </div>
                     </div>
