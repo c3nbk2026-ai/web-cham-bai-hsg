@@ -894,6 +894,25 @@ export default function ExamRoom() {
 
   const runCode = async () => {
     if (!code.trim()) return;
+
+    // 0. Kiểm tra nếu học sinh chưa điền điều kiện lặp (vẫn còn dấu ba chấm "...")
+    const lines = code.split("\n");
+    const hasEllipsisInWhile = lines.some(l => {
+      const trimmed = l.trim();
+      return trimmed.startsWith("while") && (trimmed.includes("...") || trimmed.includes("…"));
+    });
+
+    if (hasEllipsisInWhile || (code.includes("...") && code.includes("while"))) {
+      setIsOutputError(true);
+      setStdout(
+        "⚠️ BẠN CHƯA ĐIỀN ĐIỀU KIỆN LẶP CHO VÒNG LẶP 'while':\n\n" +
+        "👉 Hiện tại bạn vẫn đang để dấu ba chấm '...' ở dòng câu lệnh 'while ...:'.\n" +
+        "👉 Hãy xóa dấu '...' và điền biểu thức điều kiện lặp thích hợp của đề bài trước khi bấm 'CHẠY CODE'!\n\n" +
+        "💡 Lưu ý: Khi chưa điền điều kiện mà để dấu '...', máy tính sẽ coi điều kiện luôn Đúng và lặp vô tận khiến cạn kiệt dữ liệu."
+      );
+      return;
+    }
+
     setIsLoading(true); setIsOutputError(false); setStdout("Đang nạp dữ liệu mẫu và chạy thử chương trình...");
     try {
       const py = await initPyodide();
@@ -943,23 +962,20 @@ is_err = False
 try:
     output_body = execute_code(custom_input)
 except EOFError:
-    # Nếu bị thiếu dòng input (EOFError) và có dữ liệu mẫu của Test 01
-    if fallback_input and fallback_input.strip() and fallback_input != custom_input:
-        try:
-            output_body = execute_code(fallback_input)
-            used_input = fallback_input
-            is_fallback_used = True
-        except EOFError:
-            is_err = True
-            output_body = "⚠️ THIẾU DỮ LIỆU ĐẦU VÀO (EOFError):\\nCode của bạn có vòng lặp 'while' bắt buộc nhập lại, nhưng chưa đủ số để kiểm tra.\\nHãy nhập thêm các số vào ô 'Dữ liệu đầu vào' hoặc bấm nút 'Nạp lại Test 01'."
-        except Exception:
-            is_err = True
-            buf = io.StringIO()
-            traceback.print_exc(file=buf)
-            output_body = buf.getvalue()
+    is_err = True
+    if "..." in student_code or "…" in student_code:
+        output_body = (
+            "⚠️ BẠN CHƯA ĐIỀN ĐIỀU KIỆN LẶP (Dòng while vẫn còn dấu '...'):\\n\\n"
+            "Trong Python, cú pháp 'while ...:' tương đương với 'while True:' khiến chương trình bị lặp vô tận và nuốt sạch dữ liệu.\\n"
+            "👉 Hãy xóa dấu '...' và điền biểu thức điều kiện lặp đúng của đề bài!"
+        )
     else:
-        is_err = True
-        output_body = "⚠️ THIẾU DỮ LIỆU ĐẦU VÀO (EOFError):\\nCode của bạn có vòng lặp 'while' bắt buộc nhập lại, nhưng chưa đủ số để kiểm tra.\\nHãy nhập thêm các số vào ô 'Dữ liệu đầu vào' hoặc bấm nút 'Nạp lại Test 01'."
+        output_body = (
+            "⚠️ VÒNG LẶP KHÔNG THỂ DỪNG LẠI (EOFError):\\n\\n"
+            "Chương trình đã đọc hết tất cả các số trong 'Dữ liệu đầu vào' nhưng vòng lặp 'while' vẫn tiếp tục đòi nhập thêm.\\n"
+            "👉 NGUYÊN NHÂN: Điều kiện lặp sau câu lệnh 'while' của bạn chưa chính xác (bị ngược hoặc luôn Đúng), khiến máy tính lặp vô tận không có điểm dừng!\\n"
+            "👉 Hãy kiểm tra lại biểu thức điều kiện lặp của bạn."
+        )
 except SyntaxError as se:
     is_err = True
     msg = f"❌ LỖI CÚ PHÁP (SyntaxError): {se.msg} (dòng {se.lineno})"
@@ -1031,7 +1047,18 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
     if (isFinishedRef.current && !isSubmitting) return;
 
     if (!isAutoSubmit) {
-      if (!confirm("Bạn có chắc chắn muốn nộp bài? Hệ thống sẽ tự động chấm điểm và bạn KHÔNG THỂ sửa lại!")) return;
+      const lines = code.split("\n");
+      const hasEllipsisInWhile = lines.some(l => {
+        const trimmed = l.trim();
+        return trimmed.startsWith("while") && (trimmed.includes("...") || trimmed.includes("…"));
+      });
+      if (hasEllipsisInWhile || (code.includes("...") && code.includes("while"))) {
+        if (!confirm("⚠️ CẢNH BÁO: Dòng lệnh 'while' của bạn VẪN CÒN DẤU BA CHẤM '...' (chưa điền điều kiện lặp)!\n\nNếu nộp bài lúc này, bài thi sẽ bị 0 điểm. Bạn có chắc chắn muốn nộp không?")) {
+          return;
+        }
+      } else {
+        if (!confirm("Bạn có chắc chắn muốn nộp bài? Hệ thống sẽ tự động chấm điểm và bạn KHÔNG THỂ sửa lại!")) return;
+      }
     } else {
       setAutoSubmitNotice(autoReason || "Đã hết giờ làm bài! Hệ thống đang tự động thu bài và chấm điểm...");
     }
@@ -1414,8 +1441,8 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
           </div>
         </div>
         <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* 1. KHUNG CODE PYTHON: To rộng, cân đối (~54% chiều cao), học sinh soạn thảo thoải mái */}
-          <div className="flex-[1.2] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+          {/* 1. KHUNG CODE PYTHON: To rộng, cân đối (~58% chiều cao), học sinh soạn thảo thoải mái */}
+          <div className="flex-[1.3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-slate-300 font-bold">Trình soạn thảo Python (Pyodide)</span>
@@ -1460,16 +1487,16 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
               />
           </div>
 
-          {/* 2. HÀNG DƯỚI: Chiếm ~46% chiều cao, gồm Đề thi vừa vặn và STDIN, STDOUT xếp theo CHIỀU NGANG */}
-          <div className="flex-[0.85] flex gap-4 min-h-0">
-            {/* Khung đề thi vừa vặn thoải mái (~38% chiều ngang), không bị thừa khoảng trắng */}
-            <div className="w-[38%] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+          {/* 2. HÀNG DƯỚI: Gọn gàng (~42% chiều cao), Đề thi vừa vặn và STDIN, STDOUT xếp theo CHIỀU NGANG */}
+          <div className="flex-[0.75] flex gap-4 min-h-0">
+            {/* Khung đề thi vừa vặn thoải mái (~35% chiều ngang), không bị thừa khoảng trắng */}
+            <div className="w-[35%] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Nội dung Đề Thi — {examItem?.problemName}
               </div>
               <div className="w-full flex-1 relative overflow-hidden bg-white">
-                <iframe src={viewerUrl} className="absolute top-0 left-[-8%] w-[116%] h-[calc(100%+38px)] border-0" title="Noi dung de thi" />
+                <iframe src={viewerUrl} className="w-full h-full border-0" title="Noi dung de thi" />
               </div>
             </div>
 
@@ -1496,7 +1523,7 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
               <textarea className="w-full flex-1 p-3 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" spellCheck={false} placeholder="Dữ liệu mẫu Test 01 tự nạp..." value={stdin} onChange={e => setStdin(e.target.value)} disabled={isFinished} />
             </div>
 
-            {/* Màn hình kết quả Console STDOUT (~36% chiều ngang, xếp NGANG bên phải cùng) */}
+            {/* Màn hình kết quả Console STDOUT (~39% chiều ngang, xếp NGANG bên phải cùng) */}
             <div className="flex-1 min-w-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
               <div className="bg-slate-900 px-3 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
                 <span>Màn hình chạy (Console)</span>
