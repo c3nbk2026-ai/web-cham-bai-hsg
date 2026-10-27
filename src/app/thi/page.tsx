@@ -1413,9 +1413,9 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
             </button>
           </div>
         </div>
-        <div className="flex-1 flex flex-col gap-3 min-h-0">
-          {/* Code editor - chiều cao cố định 200px vừa khít 8 dòng code tối giản, nhường toàn bộ không gian cho Đề thi */}
-          <div className="h-[200px] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
+        <div className="flex-1 flex flex-col gap-4 min-h-0">
+          {/* 1. KHUNG CODE PYTHON: To rộng, cân đối (~54% chiều cao), học sinh soạn thảo thoải mái */}
+          <div className="flex-[1.2] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-slate-300 font-bold">Trình soạn thảo Python (Pyodide)</span>
@@ -1450,61 +1450,59 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
                 }}
                 options={{
                   minimap: { enabled: false },
-                  fontSize: 14,
-                  lineHeight: 21,
+                  fontSize: 15,
+                  lineHeight: 24,
                   wordWrap: 'on',
                   readOnly: isFinished,
                   scrollBeyondLastLine: false,
-                  padding: { top: 6, bottom: 6 }
+                  padding: { top: 10, bottom: 10 }
                 }}
               />
           </div>
-          {/* Hàng dưới: Chiếm trọn chiều cao còn lại (flex-1), Đề thi mở rộng tối đa hiển thị toàn bộ bảng Test Case */}
-          <div className="flex-1 flex gap-4 min-h-0">
-            {/* Khung đề thi chiếm phần lớn bề ngang (~70%) */}
-            <div className="flex-[2.6] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-w-0 min-h-0">
+
+          {/* 2. HÀNG DƯỚI: Chiếm ~46% chiều cao, gồm Đề thi vừa vặn và STDIN, STDOUT xếp theo CHIỀU NGANG */}
+          <div className="flex-[0.85] flex gap-4 min-h-0">
+            {/* Khung đề thi vừa vặn thoải mái (~38% chiều ngang), không bị thừa khoảng trắng */}
+            <div className="w-[38%] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Nội dung Đề Thi — {examItem?.problemName}
               </div>
               <div className="w-full flex-1 relative overflow-hidden bg-white">
-                <iframe src={viewerUrl} className="absolute top-0 left-[-10%] w-[120%] h-[calc(100%+38px)] border-0" title="Noi dung de thi" />
+                <iframe src={viewerUrl} className="absolute top-0 left-[-8%] w-[116%] h-[calc(100%+38px)] border-0" title="Noi dung de thi" />
               </div>
             </div>
 
-            {/* Cột bên phải: Gồm STDIN và STDOUT chia theo 2 tầng ngang (trên và dưới) */}
-            <div className="flex-1 flex flex-col gap-3 min-w-0 min-h-0">
-              {/* Nửa trên: Dữ liệu đầu vào STDIN (thanh ngang dẹt cao 130px) */}
-              <div className="h-[135px] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
-                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span>Dữ liệu đầu vào</span>
-                    <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-600/40 px-1.5 py-0.5 rounded font-normal">Tự nạp Test 01</span>
-                  </div>
-                  {examItem && (
-                    <button 
-                      type="button" 
-                      onClick={() => loadSampleInput()}
-                      disabled={isFinished}
-                      className="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer underline flex items-center gap-1 disabled:opacity-50"
-                      title="Nạp lại bộ dữ liệu mẫu có sẵn của Test 01"
-                    >
-                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                      Nạp lại Test 01
-                    </button>
-                  )}
+            {/* Dữ liệu đầu vào STDIN (~26% chiều ngang, xếp NGANG cạnh Đề thi) */}
+            <div className="w-[26%] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+              <div className="bg-slate-900 px-3 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <span>Dữ liệu đầu vào</span>
+                  <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-600/40 px-1.5 py-0.5 rounded font-normal">Test 01</span>
                 </div>
-                <textarea className="w-full flex-1 p-3 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" spellCheck={false} placeholder="Dữ liệu mẫu Test 01 tự nạp. Có thể sửa số hoặc bấm Chạy code ngay..." value={stdin} onChange={e => setStdin(e.target.value)} disabled={isFinished} />
+                {examItem && (
+                  <button 
+                    type="button" 
+                    onClick={() => loadSampleInput()}
+                    disabled={isFinished}
+                    className="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer underline flex items-center gap-1 disabled:opacity-50"
+                    title="Nạp lại bộ dữ liệu mẫu có sẵn của Test 01"
+                  >
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                    Nạp lại
+                  </button>
+                )}
               </div>
+              <textarea className="w-full flex-1 p-3 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" spellCheck={false} placeholder="Dữ liệu mẫu Test 01 tự nạp..." value={stdin} onChange={e => setStdin(e.target.value)} disabled={isFinished} />
+            </div>
 
-              {/* Nửa dưới: Màn hình kết quả Console STDOUT (thanh ngang dẹt chiếm toàn bộ chiều cao còn lại) */}
-              <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
-                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
-                  <span>Màn hình chạy chương trình (Console)</span>
-                  <span className="text-[10px] text-slate-500 font-normal">Giống IDLE / Thonny</span>
-                </div>
-                <textarea className={"w-full flex-1 p-3 font-mono text-xs focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Bấm 'CHẠY CODE' để xem máy tính nạp dữ liệu và xuất kết quả..." value={stdout} />
+            {/* Màn hình kết quả Console STDOUT (~36% chiều ngang, xếp NGANG bên phải cùng) */}
+            <div className="flex-1 min-w-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+              <div className="bg-slate-900 px-3 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
+                <span>Màn hình chạy (Console)</span>
+                <span className="text-[10px] text-slate-500 font-normal">IDLE / Thonny</span>
               </div>
+              <textarea className={"w-full flex-1 p-3 font-mono text-xs focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Bấm 'CHẠY CODE' để xem máy tính nạp dữ liệu và xuất kết quả..." value={stdout} />
             </div>
           </div>
         </div>
