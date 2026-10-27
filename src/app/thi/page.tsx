@@ -1441,8 +1441,8 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
           </div>
         </div>
         <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* 1. KHUNG CODE PYTHON: To rộng, cân đối (~58% chiều cao), học sinh soạn thảo thoải mái */}
-          <div className="flex-[1.3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+          {/* 1. KHUNG CODE PYTHON: Thu gọn còn ~1/3 chiều cao (flex-[0.55]), vừa vặn 9-10 dòng code mẫu, không bị thừa khoảng đen */}
+          <div className="flex-[0.55] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-slate-300 font-bold">Trình soạn thảo Python (Pyodide)</span>
@@ -1482,15 +1482,15 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
                   wordWrap: 'on',
                   readOnly: isFinished,
                   scrollBeyondLastLine: false,
-                  padding: { top: 10, bottom: 10 }
+                  padding: { top: 8, bottom: 8 }
                 }}
               />
           </div>
 
-          {/* 2. HÀNG DƯỚI: Gọn gàng (~42% chiều cao), Đề thi vừa vặn và STDIN, STDOUT xếp theo CHIỀU NGANG */}
-          <div className="flex-[0.75] flex gap-4 min-h-0">
-            {/* Khung đề thi vừa vặn thoải mái (~35% chiều ngang), không bị thừa khoảng trắng */}
-            <div className="w-[35%] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+          {/* 2. HÀNG DƯỚI: Chiếm ~2/3 chiều cao (flex-[1.45]), Đề thi cao ráo dễ đọc, STDIN và Console rộng rãi */}
+          <div className="flex-[1.45] flex gap-4 min-h-0">
+            {/* Khung đề thi vừa vặn (~36% chiều ngang), chiều cao mở rộng đọc đề thoải mái */}
+            <div className="w-[36%] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Nội dung Đề Thi — {examItem?.problemName}
