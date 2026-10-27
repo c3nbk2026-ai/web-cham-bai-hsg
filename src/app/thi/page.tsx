@@ -14,6 +14,82 @@ interface ExamItem {
   templateCode?: string; // Code mẫu điền khuyết
 }
 
+// BẢNG DỮ LIỆU ĐỀ THI GỐC (RENDER TRỰC TIẾP CHỮ TO RÕ NÉT, THAY THẾ IFRAME WORD BÉ LI TI)
+const EXAM_PREVIEW_DATA: Record<string, { title: string; desc: string; sampleIn: string; sampleOut: string }> = {
+  "NHAPAM": {
+    title: "ĐỀ SỐ 01: ĐIỀU KHIỂN NHẬP SỐ NGUYÊN ÂM",
+    desc: "Viết chương trình yêu cầu nhập một số nguyên âm x từ bàn phím (kiểu int). Nếu người dùng nhập số không phải là số âm thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số nguyên âm thì dừng và in ra màn hình: DA NHAP SO AM.",
+    sampleIn: "5 3 2 -1",
+    sampleOut: "DA NHAP SO AM và -1"
+  },
+  "NHAPKHONGAM": {
+    title: "ĐỀ SỐ 02: ĐIỀU KHIỂN NHẬP SỐ NGUYÊN KHÔNG ÂM",
+    desc: "Viết chương trình yêu cầu nhập một số nguyên không âm y từ bàn phím (kiểu int). Nếu người dùng nhập số âm thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số không âm thì dừng và in ra màn hình: DA NHAP SO KHONG AM.",
+    sampleIn: "-5 -1 -3 4",
+    sampleOut: "DA NHAP SO KHONG AM và 4"
+  },
+  "NHAPCANH": {
+    title: "ĐỀ SỐ 03: NHẬP CẠNH HÌNH VUÔNG",
+    desc: "Viết chương trình nhập vào độ dài cạnh của một hình vuông a từ bàn phím (kiểu số thực float). Nếu độ dài cạnh không hợp lệ (không phải số dương) thì phải yêu cầu nhập lại liên tục cho đến khi nhận được giá trị hợp lệ thì dừng và in ra màn hình: DA NHAP CANH HINH VUONG.",
+    sampleIn: "-5.0 -2.0 -1.0 3.0",
+    sampleOut: "DA NHAP CANH HINH VUONG và 3.0"
+  },
+  "NHAPBANKINH": {
+    title: "ĐỀ SỐ 04: NHẬP BÁN KÍNH HÌNH TRÒN",
+    desc: "Viết chương trình nhập vào bán kính của một hình tròn r từ bàn phím (kiểu số thực float). Nếu bán kính không hợp lệ (không phải số dương) thì phải yêu cầu nhập lại liên tục cho đến khi nhận được giá trị hợp lệ thì dừng và in ra màn hình: DA NHAP BAN KINH HINH TRON.",
+    sampleIn: "-5.0 -2.0 -1.0 3.0",
+    sampleOut: "DA NHAP BAN KINH HINH TRON và 3.0"
+  },
+  "NHAPCHAN": {
+    title: "ĐỀ SỐ 05: NHẬP SỐ CHẴN",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên chẵn a từ bàn phím (kiểu int). Nếu người dùng nhập số lẻ thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số chẵn thì dừng và in ra màn hình: DA NHAP SO CHAN.",
+    sampleIn: "5 3 -7 2",
+    sampleOut: "DA NHAP SO CHAN và 2"
+  },
+  "NHAPLE": {
+    title: "ĐỀ SỐ 06: NHẬP SỐ LẺ",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên lẻ b từ bàn phím (kiểu int). Nếu người dùng nhập số chẵn thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số lẻ thì dừng và in ra màn hình: DA NHAP SO LE.",
+    sampleIn: "6 2 -4 1",
+    sampleOut: "DA NHAP SO LE và 1"
+  },
+  "NHAPLECHUC": {
+    title: "ĐỀ SỐ 07: NHẬP SỐ LẺ CHỤC (không chia hết cho 10)",
+    desc: "Viết chương trình yêu cầu nhập vào một số lẻ chục c từ bàn phím (số nguyên không chia hết cho 10, kiểu int). Nếu người dùng nhập số tròn chục thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số lẻ chục thì dừng và in ra màn hình: DA NHAP SO LE CHUC.",
+    sampleIn: "60 20 -30 11",
+    sampleOut: "DA NHAP SO LE CHUC và 11"
+  },
+  "NHAPTRONCHUC": {
+    title: "ĐỀ SỐ 08: NHẬP SỐ TRÒN CHỤC",
+    desc: "Viết chương trình yêu cầu nhập vào một số tròn chục d từ bàn phím (số nguyên chia hết cho 10, kiểu int). Nếu người dùng nhập số không tròn chục thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số tròn chục thì dừng và in ra màn hình: DA NHAP SO TRON CHUC.",
+    sampleIn: "6 2 -7 10",
+    sampleOut: "DA NHAP SO TRON CHUC và 10"
+  },
+  "NHAPDUONG": {
+    title: "ĐỀ SỐ 09: NHẬP SỐ NGUYÊN DƯƠNG",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên dương n từ bàn phím (kiểu int). Nếu người dùng nhập số không phải là số dương thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số nguyên dương thì dừng và in ra màn hình: DA NHAP SO DUONG.",
+    sampleIn: "-5 -3 -1 7",
+    sampleOut: "DA NHAP SO DUONG và 7"
+  },
+  "NHAPSOKHAC0": {
+    title: "ĐỀ SỐ 10: NHẬP SỐ KHÁC 0",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên khác 0 n từ bàn phím (kiểu int). Nếu người dùng nhập số 0 thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số khác 0 thì dừng và in ra màn hình: DA NHAP SO KHAC 0.",
+    sampleIn: "0 0 5",
+    sampleOut: "DA NHAP SO KHAC 0 và 5"
+  },
+  "NHAPCHIA5": {
+    title: "ĐỀ SỐ 11: NHẬP SỐ CHIA HẾT CHO 5",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên chia hết cho 5 n từ bàn phím (kiểu int). Nếu người dùng nhập số không chia hết cho 5 thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số chia hết cho 5 thì dừng và in ra màn hình: DA NHAP SO CHIA HET CHO 5.",
+    sampleIn: "7 13 -8 25",
+    sampleOut: "DA NHAP SO CHIA HET CHO 5 và 25"
+  },
+  "NHAPCHIA3": {
+    title: "ĐỀ SỐ 12: NHẬP SỐ CHIA HẾT CHO 3",
+    desc: "Viết chương trình yêu cầu nhập vào một số nguyên chia hết cho 3 n từ bàn phím (kiểu int). Nếu người dùng nhập số không chia hết cho 3 thì phải yêu cầu nhập lại liên tục cho đến khi nhận được một số chia hết cho 3 thì dừng và in ra màn hình: DA NHAP SO CHIA HET CHO 3.",
+    sampleIn: "8 10 -7 9",
+    sampleOut: "DA NHAP SO CHIA HET CHO 3 và 9"
+  }
+};
+
 export default function ExamRoom() {
   const [structure, setStructure] = useState<any>({});
   const [className, setClassName] = useState("10A1");
@@ -37,6 +113,7 @@ export default function ExamRoom() {
   const [hasDrawn, setHasDrawn] = useState(false);
   const [submissionSuccessData, setSubmissionSuccessData] = useState<any>(null);
   const [isCheckingStudent, setIsCheckingStudent] = useState(false);
+  const [examFontSize, setExamFontSize] = useState<number>(16);
   
   // Security Layer States
   const [isAuthorized, setIsAuthorized] = useState(false);
@@ -1441,8 +1518,8 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
           </div>
         </div>
         <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* 1. KHUNG CODE PYTHON: Thu gọn còn ~1/3 chiều cao (flex-[0.55]), vừa vặn 9-10 dòng code mẫu, không bị thừa khoảng đen */}
-          <div className="flex-[0.55] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+          {/* 1. KHUNG CODE PYTHON: Chiều cao cố định 285px hiển thị ĐỦ 9 DÒNG code, không bị che khuất dòng cuối */}
+          <div className="h-[285px] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <span className="text-slate-300 font-bold">Trình soạn thảo Python (Pyodide)</span>
@@ -1487,16 +1564,80 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
               />
           </div>
 
-          {/* 2. HÀNG DƯỚI: Chiếm ~2/3 chiều cao (flex-[1.45]), Đề thi cao ráo dễ đọc, STDIN và Console rộng rãi */}
-          <div className="flex-[1.45] flex gap-4 min-h-0">
-            {/* Khung đề thi vừa vặn (~36% chiều ngang), chiều cao mở rộng đọc đề thoải mái */}
-            <div className="w-[36%] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
-              <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
-                Nội dung Đề Thi — {examItem?.problemName}
+          {/* 2. HÀNG DƯỚI: Chiếm toàn bộ không gian còn lại (flex-1), Đề thi to rõ, STDIN và Console rộng rãi */}
+          <div className="flex-1 flex gap-4 min-h-0">
+            {/* Khung đề thi chữ to rõ ràng (~38% chiều ngang), có nút tăng giảm cỡ chữ A- / A+ */}
+            <div className="w-[38%] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+              <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                  <span className="text-white font-bold">Nội dung Đề Thi — {examItem?.problemName}</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-[11px] text-slate-400 font-normal">Cỡ chữ:</span>
+                  <button 
+                    type="button" 
+                    onClick={() => setExamFontSize(s => Math.max(14, s - 1))}
+                    className="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold border border-slate-600 transition-colors"
+                    title="Thu nhỏ cỡ chữ đề thi"
+                  >
+                    A-
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => setExamFontSize(s => Math.min(24, s + 1))}
+                    className="px-2 py-0.5 rounded bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold border border-indigo-400 transition-colors"
+                    title="Phóng to cỡ chữ đề thi"
+                  >
+                    A+
+                  </button>
+                </div>
               </div>
-              <div className="w-full flex-1 relative overflow-hidden bg-white">
-                <iframe src={viewerUrl} className="w-full h-full border-0" title="Noi dung de thi" />
+
+              {/* Nội dung đề thi render trực tiếp văn bản to rõ nét (không bị co nhỏ như nhúng iframe) */}
+              <div className="w-full flex-1 p-4 overflow-y-auto bg-slate-900/60 text-slate-100 flex flex-col gap-3 select-text">
+                {examItem && EXAM_PREVIEW_DATA[examItem.problemName] ? (
+                  <>
+                    <div className="p-3 bg-indigo-950/50 border border-indigo-500/50 rounded-xl">
+                      <h2 className="font-black text-indigo-300 tracking-tight flex items-center gap-2" style={{ fontSize: `${examFontSize + 2}px` }}>
+                        <span>📌</span> {EXAM_PREVIEW_DATA[examItem.problemName].title}
+                      </h2>
+                    </div>
+
+                    <div className="p-4 bg-slate-800/95 border border-slate-700 rounded-xl shadow-inner">
+                      <div className="text-amber-400 font-bold mb-2 flex items-center gap-2" style={{ fontSize: `${examFontSize}px` }}>
+                        <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Yêu cầu đề bài:
+                      </div>
+                      <p className="text-slate-100 font-normal leading-relaxed text-justify" style={{ fontSize: `${examFontSize}px`, lineHeight: `${Math.round(examFontSize * 1.6)}px` }}>
+                        {EXAM_PREVIEW_DATA[examItem.problemName].desc}
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 bg-emerald-950/40 border border-emerald-500/50 rounded-xl">
+                      <div className="text-emerald-400 font-bold mb-1.5 flex items-center gap-2" style={{ fontSize: `${examFontSize}px` }}>
+                        <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"></path></svg>
+                        Ví dụ Test Case mẫu:
+                      </div>
+                      <div className="font-mono text-emerald-300 font-semibold space-y-1.5" style={{ fontSize: `${examFontSize}px` }}>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>👉 <b>Đầu vào (Input):</b></span>
+                          <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-700 text-amber-300 font-bold tracking-wide">
+                            {EXAM_PREVIEW_DATA[examItem.problemName].sampleIn}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span>👉 <b>Đầu ra (Output):</b></span>
+                          <span className="bg-slate-950 px-2.5 py-1 rounded-lg border border-emerald-500/40 text-emerald-300 font-bold tracking-wide">
+                            {EXAM_PREVIEW_DATA[examItem.problemName].sampleOut}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <iframe src={viewerUrl} className="w-full h-full border-0 bg-white rounded-lg" title="Noi dung de thi" />
+                )}
               </div>
             </div>
 
