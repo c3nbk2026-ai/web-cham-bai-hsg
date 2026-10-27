@@ -1,13 +1,8 @@
-# ĐỀ SỐ 04: NHẬP BÁN KÍNH HÌNH TRÒN
-# Điền biểu thức điều kiện thích hợp vào dấu ...
-
-# Bước 1: Nhập vào số thực r
 r = float(input())
 
-# Bước 2: Điền điều kiện để bắt buộc nhập lại nếu chưa phải là bán kính hợp lệ
+# 👇 ĐIỀN ĐIỀU KIỆN LẶP VÀO DẤU ... DƯỚI ĐÂY:
 while ...:
     r = float(input())
 
-# Bước 3: Xuất thông báo và giá trị
 print("DA NHAP BAN KINH HINH TRON")
 print(r)

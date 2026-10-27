@@ -1,13 +1,8 @@
-# ĐỀ SỐ 03: NHẬP CẠNH HÌNH VUÔNG
-# Điền biểu thức điều kiện thích hợp vào dấu ...
-
-# Bước 1: Nhập vào số thực a
 a = float(input())
 
-# Bước 2: Điền điều kiện để bắt buộc nhập lại nếu chưa phải là cạnh hình vuông hợp lệ
+# 👇 ĐIỀN ĐIỀU KIỆN LẶP VÀO DẤU ... DƯỚI ĐÂY:
 while ...:
     a = float(input())
 
-# Bước 3: Xuất thông báo và giá trị
 print("DA NHAP CANH HINH VUONG")
 print(a)

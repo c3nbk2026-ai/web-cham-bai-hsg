@@ -79,12 +79,15 @@ BÀI LÀM CỦA HỌC SINH (CODE PYTHON):
 ${code}
 \`\`\`
 
-YÊU CẦU CHẤM VỚT Ý TƯỞNG:
-Học sinh chạy test tự động chưa đạt trọn vẹn điểm (có thể do lỗi cú pháp nhỏ, thụt lề, sai định dạng in kết quả, hoặc thiếu điều kiện biên).
-1. Hãy đọc code và đánh giá tư duy thuật toán của học sinh ĐỐI VỚI ĐÚNG ĐỀ BÀI TRÊN (tuyệt đối không bịa đề khác).
-2. Nếu có ý tưởng xử lý đúng hướng, cho điểm vớt từ 0.5 đến ${maxScore} điểm (ví dụ 1.0, 1.5, 2.0, 2.5, ${maxScore}).
-3. Nếu code rỗng, lạc đề hoàn toàn hoặc chép linh tinh: Cho 0 điểm.
-4. Viết lời nhận xét cực kỳ ngắn gọn (Tối đa 1 câu tiếng Việt nhận xét đúng nội dung bài) và KẾT QUẢ ĐIỂM SỐ CUỐI CÙNG LÀ MỘT CON SỐ DUY NHẤT Ở CUỐI CÂU.`;
+YÊU CẦU CHẤM VỚT Ý TƯỞNG THEO BAREM CHUẨN CỦA TỔ BỘ MÔN:
+Học sinh chạy test tự động chưa đạt trọn vẹn điểm (do lỗi cú pháp nhỏ, nhầm lẫn điều kiện biên hoặc sai định dạng in).
+Quy định barem điểm vớt khuyến khích tư duy thuật toán (thang điểm tối đa ${maxScore} điểm):
+1. [2.0 - 2.5 ĐIỂM] NẾU HỌC SINH NẮM ĐÚNG CẤU TRÚC VÒNG LẶP WHILE VÀ TƯ DUY THUẬT TOÁN, NHƯNG CHỈ SAI ĐIỀU KIỆN BIÊN HOẶC DẤU SO SÁNH (ví dụ: dùng <= 0 thay vì < 0, >= 0 thay vì > 0, % 2 == 1 thay vì != 0): HÃY CHO 2.5 ĐIỂM (hoặc 2.0 điểm).
+2. [2.0 ĐIỂM] NẾU HỌC SINH ĐIỀN ĐÚNG BIỂU THỨC NHƯNG SAI TÊN BIẾN (ví dụ dùng x thay vì a, n thay vì y): HÃY CHO 2.0 ĐIỂM.
+3. [1.5 ĐIỂM] NẾU HỌC SINH CÓ VIẾT ĐƯỢC MỘT PHẦN Ý TƯỞNG NHƯNG CHƯA HOÀN CHỈNH: HÃY CHO 1.5 ĐIỂM.
+4. [1.0 ĐIỂM] NẾU HỌC SINH ĐỂ NGUYÊN CODE MẪU (CHƯA ĐIỀN HOẶC ĐỂ TRỐNG DẤU "..."): HÃY CHO ĐÚNG 1.0 ĐIỂM (đây là điểm thành phần phần Nhập dữ liệu và Xuất kết quả theo barem). Lời phê: "Đạt 1.0 điểm phần nhập/xuất dữ liệu, chưa điền biểu thức điều kiện vòng lặp while."
+5. [0 ĐIỂM] NẾU CODE HOÀN TOÀN RỖNG, BỊ XÓA HẾT MÃ NGUỒN, LẠC ĐỀ HOÀN TOÀN HOẶC CHÉP LINH TINH: CHO 0 ĐIỂM.
+6. Viết lời nhận xét ngắn gọn (1 câu tiếng Việt nhận xét đúng nội dung) và KẾT QUẢ ĐIỂM SỐ CUỐI CÙNG LÀ MỘT CON SỐ DUY NHẤT Ở CUỐI CÂU.`;
 
     // Debug API Key (chỉ lấy 5 ký tự đầu và cuối để kiểm chứng)
     const keyPrefix = GEMINI_API_KEY.substring(0, 5);
@@ -283,6 +286,45 @@ export async function POST(req: Request) {
                     ]],
                 },
             });
+        }
+
+        // TỰ ĐỘNG ĐỒNG BỘ ĐIỂM VÀ SỐ LẦN THI SANG TAB DanhSachHS (Cột E: SoLanThi, Cột G: TrangThai)
+        if (isKTGK && studentName) {
+            try {
+                const dsRes = await sheets.spreadsheets.values.get({
+                    spreadsheetId: NEW_SPREADSHEET_ID,
+                    range: 'DanhSachHS!C2:G',
+                });
+                const dsRows = dsRes.data.values || [];
+                const norm = (s: string) => (s || "").trim().toLowerCase();
+
+                for (let i = 0; i < dsRows.length; i++) {
+                    const rStudent = norm(dsRows[i][0]); // C
+                    const rClass = norm(dsRows[i][1]);   // D
+                    if (rStudent === norm(studentName) && (!week || rClass === norm(week))) {
+                        const targetRow = i + 2;
+                        const prevTimes = parseInt(dsRows[i][2] || "0", 10) || 0;
+                        const newTimes = prevTimes + 1;
+                        const statusText = diem; // Chỉ lưu số điểm thuần túy (ví dụ 2.5, 3.0) theo yêu cầu giáo viên
+                        
+                        await sheets.spreadsheets.values.update({
+                            spreadsheetId: NEW_SPREADSHEET_ID,
+                            range: `DanhSachHS!E${targetRow}:G${targetRow}`,
+                            valueInputOption: 'USER_ENTERED',
+                            requestBody: {
+                                values: [[
+                                    newTimes.toString(), // E: SoLanThi
+                                    problem || dsRows[i][3] || "", // F: MaDe
+                                    statusText // G: TrangThai
+                                ]]
+                            }
+                        });
+                        break;
+                    }
+                }
+            } catch (syncErr) {
+                console.warn("Không đồng bộ được sang DanhSachHS:", syncErr);
+            }
         }
 
         return NextResponse.json({ success: true });

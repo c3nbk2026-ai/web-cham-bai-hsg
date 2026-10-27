@@ -130,20 +130,11 @@ export default function ExamRoom() {
       } catch(e) {}
     }
 
+    // Lưu dự phòng bản nháp vào localStorage để nếu học sinh tải lại trang (F5) thì khôi phục được ngay
     try {
-      const successObj = {
-        score: finalScore,
-        maxScore: finalMax,
-        problem: curExam.problemName,
-        passed: "Tự động nộp khi tắt trình duyệt",
-        totalTests: 0,
-        submittedAt: new Date().toLocaleTimeString('vi-VN') + " - " + new Date().toLocaleDateString('vi-VN'),
-        studentName: curStudent,
-        className: curClass
-      };
-      sessionStorage.setItem("exam_completed_submission", JSON.stringify(successObj));
-      localStorage.setItem("exam_device_locked_student", curStudent);
-      localStorage.removeItem("draft_code_" + curClass + "_" + curStudent);
+      if (curCode && curClass && curStudent) {
+        localStorage.setItem("draft_code_" + curClass + "_" + curStudent, curCode);
+      }
     } catch(e) {}
   };
 
@@ -171,6 +162,11 @@ export default function ExamRoom() {
                         setStudentName(studentsData[activeClass][0]);
                     }
                 }
+                // Xóa trạng thái nộp bài cũ của ca trước nếu có
+                try {
+                  sessionStorage.removeItem("exam_completed_submission");
+                  localStorage.removeItem("exam_device_locked_student");
+                } catch(e) {}
                 setIsAuthorized(true);
             } else {
                 setAuthError("Mã Phòng Thi không đúng!");
@@ -183,12 +179,8 @@ export default function ExamRoom() {
   };
 
 
-  // Hàm thực hiện mở khóa phòng thi từ Giáo viên (xác thực mật khẩu ô B6 tab CauHinh)
-    // Hàm học sinh hoàn thành ca thi chủ động đăng xuất nhường máy cho thí sinh tiếp theo
-  const handleLogoutForNextStudent = () => {
-    if (!confirm("Xác nhận: Em đã xem xong kết quả bài thi và muốn đăng xuất để nhường máy cho bạn tiếp theo?")) {
-      return;
-    }
+  // Hàm thực hiện chuyển máy/đăng xuất nhường máy cho thí sinh tiếp theo (Ca 2)
+  const handleLogoutForNextStudent = async () => {
     try {
       sessionStorage.clear();
       sessionStorage.removeItem("exam_completed_submission");
@@ -196,11 +188,20 @@ export default function ExamRoom() {
       if (className && studentName) {
         localStorage.removeItem(getAssignedExamKey(className, studentName));
         localStorage.removeItem("draft_code_" + className + "_" + studentName);
+        localStorage.removeItem("exam_end_time_" + className + "_" + studentName.trim().toLowerCase());
+      }
+      if (typeof window !== 'undefined') {
+        window.history.replaceState({}, '', window.location.pathname);
       }
     } catch(e) {}
+
+    // Reset toàn bộ trạng thái để thí sinh ca mới vào bốc đề
     setSubmissionSuccessData(null);
     setIsExamStarted(false);
     setIsFinished(false);
+    setIsSubmitting(false);
+    isFinishedRef.current = false;
+    isSubmittingRef.current = false;
     setHasDrawn(false);
     setExamItem(null);
     setCode("# Viết code tại đây\n");
@@ -208,9 +209,30 @@ export default function ExamRoom() {
     setStdin("");
     setViolationCount(0);
     setIsStudentLocked(false);
+    setAutoSubmitNotice("");
+
+    // Tự động tải lại cấu hình phòng thi mới nhất từ Google Sheets (Lớp đang thi ca 2, thời gian thi)
+    try {
+      const res = await fetch("/api/exam-config?t=" + Date.now());
+      const cfg = await res.json();
+      if (!cfg.error) {
+        setExamConfig(cfg);
+        const duration = parseInt(cfg["ThoiGianThi"]) || 45;
+        setTimeLeft(duration * 60);
+        if (cfg["LopDangThi"]) {
+          const activeClass = cfg["LopDangThi"].trim();
+          setClassName(activeClass);
+          if (studentsData[activeClass] && studentsData[activeClass].length > 0) {
+            setStudentName(studentsData[activeClass][0]);
+          }
+        }
+      }
+    } catch(e) {
+      setTimeLeft(45 * 60);
+    }
   };
 
-const handleTeacherUnlock = async () => {
+  const handleTeacherUnlock = async () => {
     if (!teacherPassInput.trim()) {
       setTeacherUnlockError("Vui lòng nhập mật khẩu Giáo viên!");
       return;
@@ -230,14 +252,38 @@ const handleTeacherUnlock = async () => {
           if (className && studentName) {
             localStorage.removeItem(getAssignedExamKey(className, studentName));
             localStorage.removeItem("draft_code_" + className + "_" + studentName);
+            localStorage.removeItem("exam_end_time_" + className + "_" + studentName.trim().toLowerCase());
+          }
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', window.location.pathname);
           }
         } catch(e) {}
         setSubmissionSuccessData(null);
         setIsExamStarted(false);
         setIsFinished(false);
+        setIsSubmitting(false);
+        isFinishedRef.current = false;
+        isSubmittingRef.current = false;
         setHasDrawn(false);
         setExamItem(null);
         setCode("# Viết code tại đây\n");
+        setStdout("");
+        setStdin("");
+        setViolationCount(0);
+        setIsStudentLocked(false);
+        setAutoSubmitNotice("");
+
+        // Reset thời gian làm bài từ cấu hình
+        const duration = parseInt(cfg["ThoiGianThi"]) || 45;
+        setTimeLeft(duration * 60);
+        if (cfg["LopDangThi"]) {
+          const activeClass = cfg["LopDangThi"].trim();
+          setClassName(activeClass);
+          if (studentsData[activeClass] && studentsData[activeClass].length > 0) {
+            setStudentName(studentsData[activeClass][0]);
+          }
+        }
+
         setShowTeacherUnlockModal(false);
         setTeacherPassInput("");
         alert("Đã mở khóa phòng thi thành công! Thí sinh có thể chọn tên và bắt đầu thi.");
@@ -320,9 +366,10 @@ const handleTeacherUnlock = async () => {
     const classes = ["10A1","10A2","10A3","10A4","10A5","10A6","10A7","10A8","10A9","10A10"];
 
   useEffect(() => {
-    // 0. Dọn sạch cache đề cũ nếu phiên bản ngân hàng đề đã thay đổi lên 12 đề chuẩn hóa
+    // 0. Dọn sạch cache đề cũ và khóa máy cục bộ để các ca thi dùng chung máy không bị chặn
     const BANK_VERSION = "2026_KTGK_V5_CLEAN_TEMPLATES";
     try {
+      localStorage.removeItem("exam_device_locked_student");
       const currentVer = typeof window !== 'undefined' ? localStorage.getItem("exam_bank_version") : null;
       if (currentVer !== BANK_VERSION) {
         Object.keys(localStorage).forEach(key => {
@@ -352,12 +399,35 @@ const handleTeacherUnlock = async () => {
     } catch(e) {}
 
     fetch("/api/tests").then(r => r.json()).then(setStructure);
+
+    // Tự động tải cấu hình ca thi mới nhất từ Google Sheets (LopDangThi, ThoiGianThi)
+    fetch("/api/exam-config?t=" + Date.now())
+      .then(r => r.json())
+      .then(cfg => {
+        if (!cfg.error) {
+          setExamConfig(cfg);
+          if (cfg["ThoiGianThi"]) {
+            setTimeLeft(parseInt(cfg["ThoiGianThi"]) * 60);
+          }
+          if (cfg["LopDangThi"]) {
+            setClassName(cfg["LopDangThi"].trim());
+          }
+        }
+      })
+      .catch(() => {});
     
     const params = new URLSearchParams(window.location.search);
     const studentParam = params.get('student');
     const classParam = params.get('class');
     if (studentParam) { setStudentName(studentParam); setIsStudentLocked(true); }
     if (classParam) { setClassName(classParam); }
+
+    // Xóa query param trên URL sau khi nạp để tránh học sinh ca sau bị kẹt cứng tên học sinh cũ
+    if (typeof window !== 'undefined' && (studentParam || classParam)) {
+      try {
+        window.history.replaceState({}, '', window.location.pathname);
+      } catch(e) {}
+    }
 
     fetch("/api/students?t=" + Date.now())
       .then(res => res.json())
@@ -425,6 +495,7 @@ const handleTeacherUnlock = async () => {
         sessionStorage.removeItem("exam_completed_submission");
         localStorage.removeItem("exam_device_locked_student");
         localStorage.removeItem(getAssignedExamKey(targetClass, targetStudent));
+        localStorage.removeItem("exam_end_time_" + targetClass + "_" + targetStudent.trim().toLowerCase());
       } catch(e) {}
       setSubmissionSuccessData(null);
       return { blocked: false, isUnlocked: true, rowIndex: assignInfo.rowIndex };
@@ -450,7 +521,6 @@ const handleTeacherUnlock = async () => {
         setSubmissionSuccessData(subData);
         try {
           sessionStorage.setItem("exam_completed_submission", JSON.stringify(subData));
-          localStorage.setItem("exam_device_locked_student", targetStudent);
         } catch(e) {}
         return { blocked: true, reason: "ALREADY_SUBMITTED" };
       }
@@ -470,6 +540,23 @@ const handleTeacherUnlock = async () => {
     }
   }, [className, studentsData, studentName]);
 
+  // HÀM TỐI GIẢN CODE MẪU: Bỏ các dòng chú thích rườm rà, chỉ giữ lại code sạch và làm nổi bật dòng điều kiện lặp
+  const cleanTemplateCode = (raw: string) => {
+    if (!raw) return raw;
+    const lines = raw.split("\n");
+    const cleaned: string[] = [];
+    for (const line of lines) {
+      if (line.startsWith("# ĐỀ SỐ") || line.startsWith("# Điền biểu thức")) continue;
+      if (line.includes("# Bước 2:") || line.includes("ĐIỀN ĐIỀU KIỆN")) {
+        cleaned.push("# 👇 ĐIỀN ĐIỀU KIỆN LẶP VÀO DẤU ... DƯỚI ĐÂY:");
+        continue;
+      }
+      if (line.startsWith("# Bước 1:") || line.startsWith("# Bước 3:")) continue;
+      cleaned.push(line);
+    }
+    return cleaned.join("\n").replace(/\n{3,}/g, "\n\n").trim() + "\n";
+  };
+
   // Tự động nạp code mẫu điền khuyết khi có đề thi (chỉ khôi phục bản nháp khi học sinh đang thi bị F5)
   useEffect(() => {
     if (examItem && examItem.templateCode) {
@@ -477,13 +564,18 @@ const handleTeacherUnlock = async () => {
         try {
           const savedDraft = localStorage.getItem("draft_code_" + className + "_" + studentName);
           if (savedDraft && savedDraft.trim() && savedDraft !== "# Viết code tại đây\n") {
+            if (savedDraft.includes("# ĐỀ SỐ") || savedDraft.includes("# Bước 1:")) {
+              const cleaned = cleanTemplateCode(savedDraft);
+              setCode(cleaned);
+              return;
+            }
             setCode(savedDraft);
             return;
           }
         } catch(e) {}
       }
-      // Khi mới bốc đề hoặc chưa bắt đầu thi: LUÔN LUÔN nạp code mẫu điền khuyết nguyên bản (while ...:)
-      setCode(examItem.templateCode);
+      // Khi mới bốc đề hoặc chưa bắt đầu thi: LUÔN LUÔN nạp code mẫu tối giản chỉ 8 dòng
+      setCode(cleanTemplateCode(examItem.templateCode));
     }
   }, [examItem, isExamStarted]);
 
@@ -507,39 +599,52 @@ const handleTeacherUnlock = async () => {
   }, [isExamStarted, isFinished]);
 
   
-  // TỰ ĐỘNG THU BÀI KHI HỌC SINH TẮT TRÌNH DUYỆT HOẶC ĐÓNG TAB
+  // BẢO VỆ BÀI THI: CẢNH BÁO KHI TẢI LẠI TRANG / THOÁT VÀ TỰ ĐỘNG LƯU NHÁP REAL-TIME
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
       if (isExamStartedRef.current && !isFinishedRef.current) {
-        submitEmergencyOnExit();
-        const msg = "⚠️ BÀI THI ĐANG DIỄN RA! Nếu bạn tắt trình duyệt hoặc đóng tab, hệ thống sẽ TỰ ĐỘNG NỘP BÀI làm hiện tại của bạn!";
+        // Lưu khẩn cấp bản nháp code vào localStorage
+        try {
+          if (classNameRef.current && studentNameRef.current && codeRef.current) {
+            localStorage.setItem("draft_code_" + classNameRef.current + "_" + studentNameRef.current, codeRef.current);
+          }
+        } catch(err) {}
+
+        const msg = "⚠️ BÀI THI ĐANG DIỄN RA! Bạn có chắc chắn muốn tải lại trang hoặc thoát không?";
         e.preventDefault();
         e.returnValue = msg;
         return msg;
       }
     };
 
-    const handlePageHide = () => {
-      if (isExamStartedRef.current && !isFinishedRef.current) {
-        submitEmergencyOnExit();
-      }
-    };
-
     window.addEventListener("beforeunload", handleBeforeUnload);
-    window.addEventListener("pagehide", handlePageHide);
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      window.removeEventListener("pagehide", handlePageHide);
     };
   }, []);
 
   useEffect(() => {
     if (!isExamStarted || isFinished) return;
+    const timerKey = "exam_end_time_" + className + "_" + (studentName || "").trim().toLowerCase();
     const timer = setInterval(() => {
       setTimeLeft(prev => {
+        try {
+          const savedEndTime = localStorage.getItem(timerKey);
+          if (savedEndTime) {
+            const actualRemaining = Math.max(0, Math.floor((parseInt(savedEndTime, 10) - Date.now()) / 1000));
+            if (actualRemaining <= 1) {
+              clearInterval(timer);
+              if (!isFinishedRef.current && !isSubmittingRef.current) {
+                submitCode(true, "Hết thời gian làm bài");
+              }
+              return 0;
+            }
+            return actualRemaining;
+          }
+        } catch(e) {}
+
         if (prev <= 1) {
           clearInterval(timer);
-          // Tự động thu bài và nộp ngay lập tức khi hết giờ, KHÔNG dùng alert() chặn luồng
           if (!isFinishedRef.current && !isSubmittingRef.current) {
             submitCode(true, "Hết thời gian làm bài");
           }
@@ -549,9 +654,20 @@ const handleTeacherUnlock = async () => {
       });
     }, 1000);
     return () => clearInterval(timer);
-  }, [isExamStarted, isFinished]);
+  }, [isExamStarted, isFinished, className, studentName]);
 
   const getAssignedExamKey = (cls: string, name: string) => "assigned_exam_" + (cls || "").trim() + "_" + (name || "").trim().toLowerCase();
+
+  const loadSampleInput = async (itemToLoad = examItem, folderToLoad = testFolder) => {
+    if (!itemToLoad || !folderToLoad) return;
+    try {
+      const sampleInpUrl = `/data/${folderToLoad}/Test_Case/${itemToLoad.deFolderName}/Test01/${itemToLoad.problemName}.INP`;
+      const txt = await tryFetch(sampleInpUrl) || await tryFetch(sampleInpUrl.toLowerCase());
+      if (txt && txt.trim()) {
+        setStdin(txt.trim());
+      }
+    } catch(e) {}
+  };
 
   // Tự động khôi phục đề thi đã bốc khi học sinh chọn lại tên hoặc F5 trang (luôn đối chiếu với structure mới nhất từ server)
   useEffect(() => {
@@ -567,6 +683,7 @@ const handleTeacherUnlock = async () => {
             setExamItem(freshExam.item);
             setTestFolder(freshExam.folder);
             setHasDrawn(true);
+            loadSampleInput(freshExam.item, freshExam.folder);
             return;
           } else {
             // Đề cũ (như INSOGIAM1) không còn trong ngân hàng đề -> xóa cache rác
@@ -597,6 +714,7 @@ const handleTeacherUnlock = async () => {
         if (found.item.templateCode && found.item.templateCode.trim()) {
           setCode(found.item.templateCode);
         }
+        loadSampleInput(found.item, found.folder);
         alert(`Hệ thống ghi nhận bạn đã được giao bài: "${found.item.problemName}" (Đã lưu cố định trên Google Sheet).\nKhông thể đổi đề bằng cách tải lại trang!`);
         return;
       }
@@ -631,6 +749,7 @@ const handleTeacherUnlock = async () => {
     if (r.item.templateCode && r.item.templateCode.trim()) {
       setCode(r.item.templateCode);
     }
+    loadSampleInput(r.item, r.folder);
 
     // Tự động đồng bộ mã đề vừa bốc lên cột F tab DanhSachHS trên Google Sheet của Giáo viên!
     fetch('/api/exam-assign', {
@@ -647,7 +766,6 @@ const handleTeacherUnlock = async () => {
     // Lưu dự phòng vào localStorage
     try {
       localStorage.setItem(getAssignedExamKey(className, studentName), JSON.stringify({ item: r.item, folder: r.folder }));
-      localStorage.setItem("exam_device_locked_student", studentName);
     } catch(e) {}
   };
 
@@ -662,6 +780,62 @@ const handleTeacherUnlock = async () => {
     if (examItem && examItem.templateCode && (!code || code === "# Viết code tại đây\n")) {
       setCode(examItem.templateCode);
     }
+
+    // ĐẢM BẢO QUYỀN LỢI THỜI GIAN THI CHO CA 2 THEO ĐÚNG TAB CAUHINH TRÊN GOOGLE SHEETS
+    let durationMinutes = parseInt(examConfig?.["ThoiGianThi"]) || 45;
+    try {
+      const res = await fetch("/api/exam-config?t=" + Date.now());
+      const latestCfg = await res.json();
+      if (!latestCfg.error && latestCfg["ThoiGianThi"]) {
+        durationMinutes = parseInt(latestCfg["ThoiGianThi"]) || 45;
+        setExamConfig(latestCfg);
+      }
+    } catch(err) {
+      console.warn("Dùng cấu hình thời gian hiện tại:", err);
+    }
+
+    const totalSeconds = durationMinutes * 60;
+    const timerKey = "exam_end_time_" + className + "_" + studentName.trim().toLowerCase();
+    
+    // Dọn sạch mọi timestamp của học sinh ca trước trên máy tính này để đảm bảo không bị trừ giờ oan
+    try {
+      Object.keys(localStorage).forEach(k => {
+        if (k.startsWith("exam_end_time_") && k !== timerKey) {
+          localStorage.removeItem(k);
+        }
+      });
+    } catch(e) {}
+
+    let currentRemaining = totalSeconds;
+    try {
+      const savedEndTime = localStorage.getItem(timerKey);
+      if (savedEndTime) {
+        const diff = Math.floor((parseInt(savedEndTime, 10) - Date.now()) / 1000);
+        // Nếu chính thí sinh này đang làm dở mà bị F5/reload: giữ nguyên số giây còn lại của thí sinh này
+        if (diff > 5 && diff <= totalSeconds) {
+          currentRemaining = diff;
+        } else {
+          // Nếu mốc cũ đã hết hoặc không hợp lệ: cấp mới trọn vẹn 100% thời gian thi quy định từ tab CauHinh
+          const newEndTime = Date.now() + totalSeconds * 1000;
+          localStorage.setItem(timerKey, newEndTime.toString());
+          currentRemaining = totalSeconds;
+        }
+      } else {
+        // Lần đầu thí sinh ca mới vào thi: cấp mới trọn vẹn 100% thời gian thi từ tab CauHinh
+        const newEndTime = Date.now() + totalSeconds * 1000;
+        localStorage.setItem(timerKey, newEndTime.toString());
+        currentRemaining = totalSeconds;
+      }
+    } catch(e) {
+      currentRemaining = totalSeconds;
+    }
+
+    setTimeLeft(currentRemaining);
+    isFinishedRef.current = false;
+    isSubmittingRef.current = false;
+    setIsFinished(false);
+    setIsSubmitting(false);
+
     document.documentElement.requestFullscreen().then(() => setIsExamStarted(true)).catch(() => setIsExamStarted(true));
   };
 
@@ -674,18 +848,118 @@ const handleTeacherUnlock = async () => {
 
   const runCode = async () => {
     if (!code.trim()) return;
-    setIsLoading(true); setIsOutputError(false); setStdout("Dang chay code...");
+    setIsLoading(true); setIsOutputError(false); setStdout("Đang nạp dữ liệu mẫu và chạy thử chương trình...");
     try {
       const py = await initPyodide();
-      if (!py) throw new Error("Chua tai duoc Python.");
-      py.globals.set("custom_input_data", stdin);
+      if (!py) throw new Error("Chưa tải được Python.");
+
+      let currentStdin = stdin;
+      let sampleInputData = "";
+
+      // 1. Tự động lấy dữ liệu Test 01 của đề thi làm dữ liệu mẫu
+      if (examItem && testFolder) {
+        try {
+          const sampleInpUrl = `/data/${testFolder}/Test_Case/${examItem.deFolderName}/Test01/${examItem.problemName}.INP`;
+          const fetchedInp = await tryFetch(sampleInpUrl) || await tryFetch(sampleInpUrl.toLowerCase());
+          if (fetchedInp && fetchedInp.trim()) {
+            sampleInputData = fetchedInp.trim();
+          }
+        } catch(e) {}
+      }
+
+      // Nếu ô STDIN đang trống, tự động nạp Test 01 mẫu
+      if (!currentStdin.trim() && sampleInputData) {
+        currentStdin = sampleInputData;
+        setStdin(currentStdin);
+      }
+
+      py.globals.set("custom_input_data", currentStdin);
+      py.globals.set("sample_input_data", sampleInputData);
       py.globals.set("student_code", code);
-      await py.runPythonAsync("import sys, io, traceback\nsys.stdin = io.StringIO(custom_input_data)\nsys.stdout = io.StringIO()");
-      await py.runPythonAsync("try:\n    exec(student_code, {})\nexcept Exception as e:\n    print('\\n--- CHUONG TRINH BI LOI ---')\n    traceback.print_exc(file=sys.stdout)");
-      const out = await py.runPythonAsync("sys.stdout.getvalue()");
-      if (out.includes("--- CHUONG TRINH BI LOI ---")) setIsOutputError(true);
-      setStdout(out || "<Chuong trinh khong in ra ket qua nao>");
-    } catch(e: any) { setIsOutputError(true); setStdout("LOI HE THONG:\n" + e.toString()); }
+
+      await py.runPythonAsync(`
+import sys, io, traceback, json
+
+custom_input = str(custom_input_data or "")
+fallback_input = str(sample_input_data or "")
+
+def execute_code(inp_text):
+    sys.stdin = io.StringIO(inp_text)
+    sys.stdout = io.StringIO()
+    exec(student_code, {})
+    return sys.stdout.getvalue()
+
+output_body = ""
+used_input = custom_input
+is_fallback_used = False
+is_err = False
+
+try:
+    output_body = execute_code(custom_input)
+except EOFError:
+    # Nếu bị thiếu dòng input (EOFError) và có dữ liệu mẫu của Test 01
+    if fallback_input and fallback_input.strip() and fallback_input != custom_input:
+        try:
+            output_body = execute_code(fallback_input)
+            used_input = fallback_input
+            is_fallback_used = True
+        except EOFError:
+            is_err = True
+            output_body = "⚠️ THIẾU DỮ LIỆU ĐẦU VÀO (EOFError):\\nCode của bạn có vòng lặp 'while' bắt buộc nhập lại, nhưng chưa đủ số để kiểm tra.\\nHãy nhập thêm các số vào ô 'Dữ liệu đầu vào' hoặc bấm nút 'Nạp lại Test 01'."
+        except Exception:
+            is_err = True
+            buf = io.StringIO()
+            traceback.print_exc(file=buf)
+            output_body = buf.getvalue()
+    else:
+        is_err = True
+        output_body = "⚠️ THIẾU DỮ LIỆU ĐẦU VÀO (EOFError):\\nCode của bạn có vòng lặp 'while' bắt buộc nhập lại, nhưng chưa đủ số để kiểm tra.\\nHãy nhập thêm các số vào ô 'Dữ liệu đầu vào' hoặc bấm nút 'Nạp lại Test 01'."
+except SyntaxError as se:
+    is_err = True
+    msg = f"❌ LỖI CÚ PHÁP (SyntaxError): {se.msg} (dòng {se.lineno})"
+    if "=" in student_code and "==" not in student_code:
+        msg += "\\n👉 Lưu ý: So sánh bằng trong Python phải dùng hai dấu bằng '==' chứ không dùng một dấu '=' bạn nhé!"
+    output_body = msg
+except IndentationError as ie:
+    is_err = True
+    output_body = f"❌ LỖI THỤT ĐẦU DÒNG (IndentationError): {ie.msg} (dòng {ie.lineno})\\n👉 Bạn hãy kiểm tra lại khoảng cách thụt lề sau câu lệnh while."
+except NameError as ne:
+    is_err = True
+    output_body = f"❌ LỖI TÊN BIẾN (NameError): {ne}\\n👉 Biến bạn dùng trong vòng lặp không trùng với biến đề bài đã cho ở Bước 1. Hãy kiểm tra lại!"
+except Exception:
+    is_err = True
+    buf = io.StringIO()
+    traceback.print_exc(file=buf)
+    output_body = "--- CHƯƠNG TRÌNH BÁO LỖI ---\\n" + buf.getvalue()
+
+formatted_res = ""
+if not is_err:
+    input_lines = [line.strip() for line in used_input.splitlines() if line.strip()]
+    formatted_res = ">>> DỮ LIỆU ĐÃ NHẬP VÀO:\\n"
+    if input_lines:
+        for line in input_lines:
+            formatted_res += f"  > {line}\\n"
+    else:
+        formatted_res += "  (Không có dữ liệu nhập)\\n"
+    formatted_res += "----------------------------------------\\n"
+    formatted_res += ">>> KẾT QUẢ CHƯƠNG TRÌNH XUẤT RA:\\n"
+    formatted_res += (output_body.strip() if output_body.strip() else "<Chương trình không in ra kết quả nào>")
+    if is_fallback_used:
+        formatted_res += "\\n----------------------------------------\\n💡 Đã tự động dùng Test 01 của đề để chạy hoàn tất cho bạn."
+else:
+    formatted_res = output_body
+
+py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
+`);
+
+      const jsonStr = await py.runPythonAsync("py_run_result");
+      const parsed = JSON.parse(jsonStr);
+      setIsOutputError(parsed.is_err);
+      setStdout(parsed.output);
+    } catch(e: any) { 
+      setIsOutputError(true); 
+      setStdout("LỖI HỆ THỐNG:\n" + e.toString()); 
+    }
     finally { setIsLoading(false); }
   };
 
@@ -844,7 +1118,8 @@ const handleTeacherUnlock = async () => {
       setSubmissionSuccessData(successObj);
       try {
         sessionStorage.setItem("exam_completed_submission", JSON.stringify(successObj));
-        localStorage.setItem("exam_device_locked_student", studentName);
+        localStorage.removeItem("draft_code_" + className + "_" + studentName);
+        localStorage.removeItem("exam_end_time_" + className + "_" + studentName.trim().toLowerCase());
       } catch(e) {}
     }
     setIsSubmitting(false);
@@ -903,16 +1178,16 @@ const handleTeacherUnlock = async () => {
               <svg className="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path></svg>
               HOÀN THÀNH BÀI THI:
             </div>
-            Bài làm và kết quả của em đã được đồng bộ an toàn về máy chủ Google Sheets. Sau khi xem xong kết quả, em hãy bấm nút <b>"Rời phòng thi — Đăng xuất cho bạn tiếp theo"</b> bên dưới để nhường máy.
+            Bài làm và kết quả của em đã được đồng bộ an toàn về máy chủ Google Sheets. Nếu em đã xem xong kết quả hoặc là <b>thí sinh của ca thi tiếp theo</b>, hãy bấm nút xanh bên dưới để bàn giao máy và vào thi.
           </div>
 
           <div className="mt-6 pt-4 border-t border-slate-800 flex flex-col items-center justify-center gap-3">
             <button 
               onClick={handleLogoutForNextStudent}
-              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-emerald-600/30 transition-all transform active:scale-95 flex items-center justify-center gap-2 cursor-pointer border border-emerald-400/30"
+              className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-indigo-600 hover:from-emerald-500 hover:to-indigo-500 text-white font-black text-base shadow-xl shadow-emerald-600/30 transition-all transform active:scale-95 flex items-center justify-center gap-2.5 cursor-pointer border border-emerald-400/40"
             >
-              <svg className="w-5 h-5 text-emerald-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-              HOÀN THÀNH — ĐĂNG XUẤT CHO BẠN TIẾP THEO
+              <svg className="w-6 h-6 text-emerald-200 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+              BÀN GIAO MÁY CHO BẠN TIẾP THEO / VÀO THI CA MỚI
             </button>
 
             <button 
@@ -1079,7 +1354,10 @@ const handleTeacherUnlock = async () => {
             )}
           </div>
           <div className="flex items-center gap-4">
-            <div className={"text-3xl font-mono font-black mr-4 " + (timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400')}>{formatTime(timeLeft)}</div>
+            <div className="flex flex-col items-end mr-4">
+              <div className={"text-3xl font-mono font-black " + (timeLeft < 300 ? 'text-rose-500 animate-pulse' : 'text-emerald-400')}>{formatTime(timeLeft)}</div>
+              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Quy định: {examConfig?.["ThoiGianThi"] || 45} phút</div>
+            </div>
             <button onClick={runCode} disabled={isLoading || isFinished} className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-blue-900 transition-all disabled:opacity-50">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
               {isLoading ? 'Đang chạy...' : 'CHẠY CODE'}
@@ -1089,11 +1367,16 @@ const handleTeacherUnlock = async () => {
             </button>
           </div>
         </div>
-        <div className="flex-1 flex flex-col gap-4 min-h-0">
-          {/* Code editor - vừa khít 11-13 dòng code mẫu, nhường chiều cao cho khung đề thi */}
-          <div className="flex-[1.05] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+        <div className="flex-1 flex flex-col gap-3 min-h-0">
+          {/* Code editor - chiều cao cố định 200px vừa khít 8 dòng code tối giản, nhường toàn bộ không gian cho Đề thi */}
+          <div className="h-[200px] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
             <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
-              <span>Trình soạn thảo Python (Pyodide)</span>
+              <div className="flex items-center gap-2">
+                <span className="text-slate-300 font-bold">Trình soạn thảo Python (Pyodide)</span>
+                <span className="text-[11px] bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2.5 py-0.5 rounded-full font-bold">
+                  👉 Điền điều kiện LẶP vào dấu ...
+                </span>
+              </div>
               {examItem?.templateCode && (
                 <button
                   type="button"
@@ -1126,13 +1409,14 @@ const handleTeacherUnlock = async () => {
                   wordWrap: 'on',
                   readOnly: isFinished,
                   scrollBeyondLastLine: false,
-                  padding: { top: 8, bottom: 8 }
+                  padding: { top: 6, bottom: 6 }
                 }}
               />
           </div>
-          {/* Hàng dưới: Đề thi chiếm ưu thế flex-[1.25] để hiển thị trọn vẹn bảng Test Case */}
-          <div className="flex-[1.1] flex gap-4 min-h-0">
-            <div className="flex-[3] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-w-0 min-h-0">
+          {/* Hàng dưới: Chiếm trọn chiều cao còn lại (flex-1), Đề thi mở rộng tối đa hiển thị toàn bộ bảng Test Case */}
+          <div className="flex-1 flex gap-4 min-h-0">
+            {/* Khung đề thi chiếm phần lớn bề ngang (~70%) */}
+            <div className="flex-[2.6] bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-w-0 min-h-0">
               <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 flex items-center gap-2 shrink-0">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                 Nội dung Đề Thi — {examItem?.problemName}
@@ -1141,13 +1425,40 @@ const handleTeacherUnlock = async () => {
                 <iframe src={viewerUrl} className="absolute top-0 left-[-10%] w-[120%] h-[calc(100%+38px)] border-0" title="Noi dung de thi" />
               </div>
             </div>
-            <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-w-0 min-h-0">
-              <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0">Dữ liệu nhập (STDIN)</div>
-              <textarea className="w-full flex-1 p-4 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" spellCheck={false} placeholder="Nhập dữ liệu đầu vào để thử..." value={stdin} onChange={e => setStdin(e.target.value)} disabled={isFinished} />
-            </div>
-            <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-w-0 min-h-0">
-              <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0">Kết quả xuất (STDOUT)</div>
-              <textarea className={"w-full flex-1 p-4 font-mono text-sm focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Kết quả sẽ hiển thị ở đây sau khi bấm Chạy Code..." value={stdout} />
+
+            {/* Cột bên phải: Gồm STDIN và STDOUT chia theo 2 tầng ngang (trên và dưới) */}
+            <div className="flex-1 flex flex-col gap-3 min-w-0 min-h-0">
+              {/* Nửa trên: Dữ liệu đầu vào STDIN (thanh ngang dẹt cao 130px) */}
+              <div className="h-[135px] shrink-0 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl">
+                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span>Dữ liệu đầu vào</span>
+                    <span className="text-[10px] bg-emerald-950/80 text-emerald-400 border border-emerald-600/40 px-1.5 py-0.5 rounded font-normal">Tự nạp Test 01</span>
+                  </div>
+                  {examItem && (
+                    <button 
+                      type="button" 
+                      onClick={() => loadSampleInput()}
+                      disabled={isFinished}
+                      className="text-[11px] text-cyan-400 hover:text-cyan-300 font-semibold cursor-pointer underline flex items-center gap-1 disabled:opacity-50"
+                      title="Nạp lại bộ dữ liệu mẫu có sẵn của Test 01"
+                    >
+                      <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                      Nạp lại Test 01
+                    </button>
+                  )}
+                </div>
+                <textarea className="w-full flex-1 p-3 bg-slate-900/50 text-slate-300 font-mono text-sm focus:outline-none resize-none" spellCheck={false} placeholder="Dữ liệu mẫu Test 01 tự nạp. Có thể sửa số hoặc bấm Chạy code ngay..." value={stdin} onChange={e => setStdin(e.target.value)} disabled={isFinished} />
+              </div>
+
+              {/* Nửa dưới: Màn hình kết quả Console STDOUT (thanh ngang dẹt chiếm toàn bộ chiều cao còn lại) */}
+              <div className="flex-1 bg-slate-800 rounded-2xl border border-slate-700 flex flex-col overflow-hidden shadow-xl min-h-0">
+                <div className="bg-slate-900 px-4 py-2 border-b border-slate-700 text-xs font-bold text-slate-400 shrink-0 flex items-center justify-between">
+                  <span>Màn hình chạy chương trình (Console)</span>
+                  <span className="text-[10px] text-slate-500 font-normal">Giống IDLE / Thonny</span>
+                </div>
+                <textarea className={"w-full flex-1 p-3 font-mono text-xs focus:outline-none resize-none " + (isOutputError ? 'bg-rose-900/20 text-rose-400' : 'bg-slate-900/50 text-emerald-400')} spellCheck={false} readOnly placeholder="Bấm 'CHẠY CODE' để xem máy tính nạp dữ liệu và xuất kết quả..." value={stdout} />
+              </div>
             </div>
           </div>
         </div>
