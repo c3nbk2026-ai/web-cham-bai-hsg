@@ -686,10 +686,10 @@ export default function ExamRoom() {
   useEffect(() => {
     if (!isExamStarted || isFinished) return;
     const handleVisibility = () => {
-      if (document.hidden) { setViolationCount(c => c + 1); alert("CANH BAO GIAN LAN: Ban vua chuyen tab! Vi pham da duoc ghi lai."); }
+      if (document.hidden) { setViolationCount(c => c + 1); alert("CẢNH BÁO GIAN LẬN: Bạn vừa chuyển tab! Vi phạm đã được ghi lại."); }
     };
     const handleFullscreen = () => {
-      if (!document.fullscreenElement) { setViolationCount(c => c + 1); alert("CANH BAO GIAN LAN: Ban vua thoat toan man hinh! Vi pham da duoc ghi lai."); }
+      if (!document.fullscreenElement) { setViolationCount(c => c + 1); alert("CẢNH BÁO GIAN LẬN: Bạn vừa thoát toàn màn hình! Vi phạm đã được ghi lại."); }
     };
     const handleContext = (e: Event) => e.preventDefault();
     document.addEventListener("visibilitychange", handleVisibility);
@@ -1437,8 +1437,8 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
         <div className="w-20 h-20 bg-rose-100 rounded-full flex items-center justify-center mb-6 text-rose-600">
           <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
         </div>
-        <h1 className="text-2xl font-black text-slate-800 mb-2">Phong Thi Khep Kin</h1>
-        <p className="text-slate-500 text-center text-sm font-medium mb-8">Moi hanh vi thoat toan man hinh hoac chuyen ung dung deu bi ghi lai va tru diem.</p>
+        <h1 className="text-2xl font-black text-slate-800 mb-2">Phòng Thi Khép Kín</h1>
+        <p className="text-slate-500 text-center text-sm font-medium mb-8">Mọi hành vi thoát toàn màn hình hoặc chuyển ứng dụng đều bị ghi lại và trừ điểm.</p>
         <div className="w-full space-y-4">
           <div className="flex gap-4 w-full">
             <div className="w-1/3">
