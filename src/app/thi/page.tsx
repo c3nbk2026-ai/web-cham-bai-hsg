@@ -1589,6 +1589,8 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
                   }
                 }}
                 options={{
+                  fontFamily: "'Consolas', 'Courier New', monospace",
+                  fontLigatures: false,
                   minimap: { enabled: false },
                   fontSize: 15,
                   lineHeight: 24,

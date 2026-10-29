@@ -25,14 +25,25 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Ép buộc mọi tiêu đề, văn bản, nút bấm sử dụng font Be Vietnam Pro chuẩn tiếng Việt */
-h1, h2, h3, h4, h5, h6, p, span, a, button, input, textarea, select, label {
+/* Áp dụng font tiếng Việt Be Vietnam Pro cho văn bản, tiêu đề, nút bấm thông thường */
+h1, h2, h3, h4, h5, h6, p, span, a, button, label {
   font-family: 'Be Vietnam Pro', var(--font-be-vietnam-pro), system-ui, -apple-system, sans-serif;
 }
 
-/* Đảm bảo vùng code giữ nguyên font Monospace kỹ thuật */
-code, pre, .font-mono, kbd, samp {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace !important;
+input:not(.font-mono), textarea:not(.font-mono), select {
+  font-family: 'Be Vietnam Pro', var(--font-be-vietnam-pro), system-ui, -apple-system, sans-serif;
+}
+
+/* KHÔI PHỤC VÀ BẢO VỆ FONT LẬP TRÌNH CHO MONACO EDITOR VÀ VÙNG CODE */
+.monaco-editor,
+.monaco-editor *,
+.monaco-editor span,
+.monaco-editor textarea,
+.monaco-editor .view-line,
+.monaco-editor .view-lines,
+.monaco-editor .lines-content,
+code, pre, .font-mono, textarea.font-mono, kbd, samp {
+  font-family: 'Consolas', 'Courier New', 'Fira Code', 'Cascadia Code', ui-monospace, SFMono-Regular, Menlo, Monaco, monospace !important;
 }
 
 @layer utilities {
