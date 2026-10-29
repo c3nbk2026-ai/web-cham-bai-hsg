@@ -1645,7 +1645,7 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
                         <svg className="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         Yêu cầu đề bài:
                       </div>
-                      <p className="text-slate-100 font-normal leading-relaxed text-justify" style={{ fontSize: `${examFontSize}px`, lineHeight: `${Math.round(examFontSize * 1.6)}px` }}>
+                      <p className="text-slate-100 font-medium leading-relaxed text-justify tracking-normal" style={{ fontSize: `${examFontSize}px`, lineHeight: `${Math.round(examFontSize * 1.6)}px` }}>
                         {EXAM_PREVIEW_DATA[examItem.problemName].desc}
                       </p>
                     </div>

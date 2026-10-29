@@ -1,12 +1,14 @@
-﻿import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import type { Metadata } from "next";
+import { Be_Vietnam_Pro } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 import { ModeProvider } from "@/components/ModeContext";
 
-const inter = Inter({
-  subsets: ["latin", "vietnamese"],
-  variable: "--font-inter",
+const beVietnamPro = Be_Vietnam_Pro({
+  weight: ["300", "400", "500", "600", "700", "800", "900"],
+  subsets: ["vietnamese", "latin"],
+  variable: "--font-be-vietnam-pro",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -20,8 +22,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="vi">
-      <body className={` antialiased bg-slate-50 min-h-screen flex flex-col selection:bg-indigo-500/20 relative overflow-x-hidden`}>
+    <html lang="vi" className={beVietnamPro.variable}>
+      <body className={`${beVietnamPro.className} font-sans antialiased bg-slate-50 min-h-screen flex flex-col selection:bg-indigo-500/20 relative overflow-x-hidden`}>
         
         {/* Colorful Background Blobs */}
         <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
@@ -42,4 +44,3 @@ export default function RootLayout({
     </html>
   );
 }
-
