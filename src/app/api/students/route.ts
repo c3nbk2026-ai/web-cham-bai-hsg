@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
-import { SPREADSHEET_ID } from '@/lib/server/google';
+import { EXAM_SPREADSHEET_ID } from '@/lib/server/google';
 
 export const dynamic = 'force-dynamic';
 
@@ -23,7 +23,7 @@ export async function GET() {
 
         const sheets = google.sheets({ version: 'v4', auth });
         const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEET_ID,
+            spreadsheetId: EXAM_SPREADSHEET_ID,
             range: 'DanhSachHS!C2:D', // C = HoTen, D = Lop
         });
 

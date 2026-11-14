@@ -9,10 +9,10 @@ function safeCell(v: any) {
     return /^[=+\-@]/.test(v) ? "'" + v : v;
 }
 
-import { SPREADSHEET_ID } from '@/lib/server/google';
-// Mọi tab (BangDiem_*, DiemThucHanh, DanhSachHS) nằm chung một bảng tính
-const OLD_SPREADSHEET_ID = SPREADSHEET_ID;
-const NEW_SPREADSHEET_ID = SPREADSHEET_ID;
+import { SCORE_SPREADSHEET_ID, EXAM_SPREADSHEET_ID } from '@/lib/server/google';
+// Điểm HSG (BangDiem_*) ghi vào bảng điểm đội tuyển; điểm KTGK (DiemThucHanh, DanhSachHS) ghi vào sheet Phòng thi
+const OLD_SPREADSHEET_ID = SCORE_SPREADSHEET_ID;
+const NEW_SPREADSHEET_ID = EXAM_SPREADSHEET_ID;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 const KTGK_PROBLEMS: Record<string, { title: string, desc: string }> = {

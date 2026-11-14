@@ -1,4 +1,4 @@
-import { getSheetsClient, SPREADSHEET_ID } from './google';
+import { getSheetsClient, EXAM_SPREADSHEET_ID } from './google';
 
 /** Các khóa bí mật trong tab CauHinh: KHÔNG BAO GIỜ gửi về trình duyệt. */
 const SECRET_KEYS = /matkhau|password|maphongthi/i;
@@ -6,7 +6,7 @@ const SECRET_KEYS = /matkhau|password|maphongthi/i;
 export async function getRawExamConfig(): Promise<Record<string, string>> {
     const sheets = getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: SPREADSHEET_ID,
+        spreadsheetId: EXAM_SPREADSHEET_ID,
         range: 'CauHinh!A1:B20',
     });
     const rows = response.data.values || [];

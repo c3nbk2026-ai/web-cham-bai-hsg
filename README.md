@@ -14,7 +14,8 @@ npm run dev     # mở http://localhost:3000
 | Tên | Bắt buộc | Ý nghĩa |
 | --- | --- | --- |
 | `GOOGLE_CREDENTIALS` | Có | Nội dung file JSON của service account Google Sheets |
-| `GOOGLE_SHEETS_ID` | Có | ID bảng tính Google Sheet DUY NHẤT của app (mặc định `1UIrvCAp3NRE6CVhux1jOdRxyQ1ZcwuYmpVLUJ9KdprE`) |
+| `GOOGLE_SHEETS_ID` | Không | Bảng điểm đội tuyển HSG (có ID mặc định) |
+| `GOOGLE_EXAM_SHEETS_ID` | Không | Sheet Phòng thi KTGK lớp học (có ID mặc định) |
 | `GEMINI_API_KEY` | Có | Key Gemini cho trợ giảng AI và chấm vớt |
 | `GRADE_SECRET` | Nên có | Chuỗi bí mật bất kỳ (≥ 32 ký tự) để ký điểm. Nếu không đặt, hệ thống tự suy ra từ `GOOGLE_CREDENTIALS` |
 
@@ -40,16 +41,14 @@ và lời giải sang `private-data/` trước khi đẩy lên mạng.
 
 Ở chế độ **Tự học**, test sai vẫn hiện "Mẫu" (đáp án) để học sinh đối chiếu. Ở **Đề thi** thì không.
 
-## Bảng tính Google Sheet (một bảng duy nhất)
+## Bảng tính Google Sheet (hai bảng)
 
-| Tab | Dùng cho | Cột |
+| Bảng tính | Biến môi trường (ID mặc định) | Tab |
 | --- | --- | --- |
-| `BangDiem_DaiTra`, `BangDiem_DoiTuyen` | Điểm luyện tập HSG (trang Nộp bài) | A–K |
-| `CauHinh` | Phòng thi KTGK lớp học | A: tên, B: giá trị (`MaPhongThi`, `MatKhauGiamThi`, `ThoiGianThi`, `LopDangThi`) |
-| `DanhSachHS` | Học sinh lớp học | C: HoTen, D: Lop, E: SoLanThi, F: MaDe, G: TrangThai |
-| `DiemThucHanh` | Điểm KTGK thực hành | A–K |
+| Bảng điểm đội tuyển HSG | `GOOGLE_SHEETS_ID` (`1UIrvCAp3NRE6CVhux1jOdRxyQ1ZcwuYmpVLUJ9KdprE`) | `BangDiem_DaiTra`, `BangDiem_DoiTuyen` |
+| Phòng thi KTGK (học sinh lớp học) | `GOOGLE_EXAM_SHEETS_ID` (`1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M`) | `CauHinh`, `DanhSachHS` (C: HoTen, D: Lop, E: SoLanThi, F: MaDe, G: TrangThai), `DiemThucHanh` |
 
-Tài khoản dịch vụ (service account) trong `GOOGLE_CREDENTIALS` phải có quyền **Người chỉnh sửa** trên bảng tính này.
+Hai ID này khai báo tại `src/lib/server/google.ts`. Tài khoản dịch vụ trong `GOOGLE_CREDENTIALS` phải có quyền **Người chỉnh sửa** trên cả hai bảng tính.
 
 ## Phòng thi (tab `CauHinh`)
 
