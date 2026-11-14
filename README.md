@@ -56,3 +56,27 @@ Hai ID này khai báo tại `src/lib/server/google.ts`. Tài khoản dịch vụ
 
 - `MaPhongThi`, `MatKhauGiamThi`: được kiểm tra trên máy chủ (`/api/exam-auth`), không gửi về trình duyệt. **Bắt buộc phải có**, không còn mật khẩu mặc định.
 - Ô Mã đề (cột F tab `DanhSachHS`) chỉ được ghi khi đang trống. Muốn cho học sinh bốc lại đề: xóa ô đó.
+
+## Chấm chuẩn HSG (từ Giai đoạn 2)
+
+Chỉ áp dụng ở chế độ **Nâng Cao** và **Luyện Đề** trên trang Chấm Code. Chế độ **Cơ Bản** chấm như cũ.
+
+- **Giới hạn thời gian** mỗi test (mặc định 2 giây; Python trên trình duyệt chậm hơn máy thi nên đã nới). Quá giờ → **QUÁ THỜI GIAN (TLE)**. 2 test liên tiếp cùng subtask bị TLE thì các test còn lại của subtask đó được bỏ qua cho học sinh đỡ chờ.
+- **Điểm theo subtask**, thang 10, theo tỉ lệ ghi trên đề.
+- Cấu hình mỗi bài: `private-data/TUAN x/DE_THI/TestCases/TEST_BAI/subtasks.json`
+
+```json
+{
+  "diemToiDa": 10,
+  "gioiHanThoiGianGiay": 2,
+  "subtasks": [
+    { "ten": "Subtask 1", "tests": "1-12", "diem": 6 },
+    { "ten": "Subtask 2", "tests": "13-20", "diem": 4 }
+  ]
+}
+```
+
+Bài không có file này (ví dụ bài Tự học) được chấm như một subtask duy nhất, mỗi test bằng điểm nhau.
+
+**Mọi chế độ** (kể cả Cơ Bản) đều chạy code trong luồng riêng (`public/py-worker.js`): code lặp vô hạn không làm treo trang, không mất bài. Ở Cơ Bản, code bị dừng sau 10 giây.
+

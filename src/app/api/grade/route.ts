@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { gradeSubmission, GradeError } from '@/lib/server/grading';
+import { gradeSubmission, GradeError, hsgProblemInfo } from '@/lib/server/grading';
 import { signGrade, sha256Node } from '@/lib/server/gradeToken';
 
 export const dynamic = 'force-dynamic';
@@ -34,5 +34,21 @@ export async function POST(req: Request) {
         }
         console.error('Grade API Error:', error);
         return NextResponse.json({ error: 'Lỗi máy chấm' }, { status: 500 });
+    }
+}
+
+/**
+ * GET /api/grade?week=...&category=...&problem=...
+ * Thông tin công khai của bài HSG: giới hạn thời gian và các subtask (KHÔNG có đáp án).
+ */
+export async function GET(req: Request) {
+    try {
+        const q = Object.fromEntries(new URL(req.url).searchParams.entries());
+        return NextResponse.json(hsgProblemInfo(q));
+    } catch (error: any) {
+        if (error instanceof GradeError) {
+            return NextResponse.json({ error: error.message }, { status: 400 });
+        }
+        return NextResponse.json({ error: 'Lỗi đọc cấu hình bài' }, { status: 500 });
     }
 }

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import dynamic from "next/dynamic";
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
-import Script from "next/script";
 import { useMode } from "@/components/ModeContext";
 import { fingerprintOutput } from "@/lib/gradingShared";
+import { PyRunner } from "@/lib/pyRunner";
 
 export default function Home() {
   const { mode } = useMode();
@@ -17,7 +17,21 @@ export default function Home() {
   const [code, setCode] = useState("# Viết code tại đây\n");
   const [results, setResults] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [pyodide, setPyodide] = useState<any>(null);
+  // Bộ chạy Python trong luồng riêng (chống treo trang khi code lặp vô hạn)
+  const runnerRef = useRef<PyRunner | null>(null);
+  const getRunner = () => {
+    if (!runnerRef.current) runnerRef.current = new PyRunner();
+    return runnerRef.current;
+  };
+  const [progress, setProgress] = useState("");
+  const [subtaskSummary, setSubtaskSummary] = useState<any>(null);
+  const [timeLimitMs, setTimeLimitMs] = useState(2000);
+  // Chấm chuẩn HSG (giới hạn thời gian, TLE, điểm theo subtask) chỉ áp dụng cho Nâng Cao và Luyện Đề
+  const strictMode = mode === 'DOI_TUYEN' || mode === 'LUYEN_DE';
+
+  useEffect(() => {
+    return () => { runnerRef.current?.dispose(); };
+  }, []);
   
   const [studentName, setStudentName] = useState("");
   const [students, setStudents] = useState<string[]>([]);
@@ -77,16 +91,6 @@ export default function Home() {
     }
   }, [week, category, structure]);
 
-  const initPyodide = async () => {
-    if (pyodide) return pyodide;
-    if (!(window as any).loadPyodide) return null;
-    const py = await (window as any).loadPyodide({
-      indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.0/full/",
-    });
-    setPyodide(py);
-    return py;
-  };
-
   const getTestUrl = (testName: string, ext: string) => {
     const subfolder = category === "TL_TU_HOC" ? "BO_TEST" : "TestCases";
     const problemName = problem.replace("TEST_", "");
@@ -97,12 +101,27 @@ export default function Home() {
     if (!problem) return alert("Vui lòng chọn bài!");
     setIsLoading(true);
     setResults([]);
+    setSubtaskSummary(null);
+
+    const strict = strictMode;
+    let limitMs = strict ? 2000 : 10000; // Cơ Bản: chỉ chặn vòng lặp vô hạn, không tính TLE chặt
+    const subtaskOf = new Map<string, number>();
 
     try {
-      const py = await initPyodide();
-      if (!py) throw new Error("Chưa tải được trình biên dịch Python.");
+      if (strict) {
+        try {
+          const infoRes = await fetch(`/api/grade?week=${encodeURIComponent(week)}&category=${encodeURIComponent(category)}&problem=${encodeURIComponent(problem)}`);
+          const info = await infoRes.json();
+          if (infoRes.ok) {
+            if (info.timeLimitMs) limitMs = info.timeLimitMs;
+            (info.subtasks || []).forEach((st: any, i: number) => (st.tests || []).forEach((tn: string) => subtaskOf.set(tn, i)));
+          }
+        } catch (e) {}
+        setTimeLimitMs(limitMs);
+      }
 
       // Chỉ tải dữ liệu vào (.INP). Đáp án (.OUT) nằm trên máy chủ: máy chủ tự so và tính điểm.
+      setProgress("Đang tải dữ liệu test...");
       const testCases: { name: string, inp: string }[] = [];
       const maxTests = category === "TL_TU_HOC" ? 10 : 20;
       for (let i = 1; i <= maxTests; i++) {
@@ -120,79 +139,94 @@ export default function Home() {
         throw new Error("Không tìm thấy dữ liệu Test Case cho bài này.");
       }
 
-      const localRuns: { name: string, actual?: string, err?: string }[] = [];
-      const fingerprints: any[] = [];
+      setProgress("Đang chuẩn bị Python...");
+      const runner = getRunner();
+      await runner.warmup();
 
-      for (const t of testCases) {
-        const pName = problem.replace("TEST_", "");
-        
-        try {
-            let smartInp = t.inp;
+      const localRuns: { name: string, actual?: string, err?: string, ms?: number, tle?: boolean, skipped?: boolean }[] = [];
+      const fingerprints: any[] = [];
+      const tleStreak = new Map<number, number>();
+      const pName = problem.replace("TEST_", "");
+
+      for (let idx = 0; idx < testCases.length; idx++) {
+        const t = testCases[idx];
+        const st = subtaskOf.get(t.name) ?? -1;
+        // 2 test liên tiếp cùng subtask đã quá thời gian: bỏ qua các test còn lại của subtask đó cho đỡ chờ
+        if ((tleStreak.get(st) || 0) >= 2) {
+          localRuns.push({ name: t.name, tle: true, skipped: true });
+          continue;
+        }
+        setProgress(`Đang chạy ${t.name} (${idx + 1}/${testCases.length})...`);
+
+        let smartInp = t.inp;
         if (mode === 'DAI_TRA' && !code.includes('split(') && !code.includes('split()') && !code.includes('sys.stdin.read')) {
             smartInp = (t.inp || "").trim().replace(/[ \t]+/g, '\n');
         }
-        py.globals.set("test_input_data", smartInp);
-            await py.runPythonAsync(`
-import sys
-import io
-sys.stdin = io.StringIO(test_input_data)
-sys.stdout = io.StringIO()
-            `);
-            
-            try { py.FS.writeFile(pName + ".INP", smartInp); } catch(e) {}
-            try { py.FS.writeFile(pName + ".inp", smartInp); } catch(e) {}
-            try { py.FS.writeFile(pName + ".OUT", ""); } catch(e) {}
-            try { py.FS.writeFile(pName + ".out", ""); } catch(e) {}
 
-            await py.runPythonAsync(code);
-
-            let actualOut = "";
-            try { actualOut = py.FS.readFile(pName + ".OUT", { encoding: "utf8" }).trim(); } catch(e) {}
-            if (!actualOut) {
-                try { actualOut = py.FS.readFile(pName + ".out", { encoding: "utf8" }).trim(); } catch(e) {}
-            }
-            if (!actualOut) {
-                actualOut = await py.runPythonAsync("sys.stdout.getvalue().strip()");
-            }
-            localRuns.push({ name: t.name, actual: actualOut });
-            fingerprints.push({ name: t.name, ...(await fingerprintOutput(actualOut)) });
-        } catch (e: any) {
-            localRuns.push({ name: t.name, err: e.message });
+        const r = await runner.run(code, smartInp, pName, limitMs);
+        if (r.status === 'TLE') {
+          tleStreak.set(st, (tleStreak.get(st) || 0) + 1);
+          localRuns.push({ name: t.name, tle: true, ms: r.ms });
+          continue;
         }
+        tleStreak.set(st, 0);
+        if (r.status === 'RE') {
+          if ((r.err || '').startsWith('Không tải được Python')) throw new Error(r.err);
+          localRuns.push({ name: t.name, err: r.err, ms: r.ms });
+          continue;
+        }
+        localRuns.push({ name: t.name, actual: r.out, ms: r.ms });
+        fingerprints.push({ name: t.name, ...(await fingerprintOutput(r.out)) });
       }
 
       // Gửi dấu vân tay kết quả lên máy chủ chấm (so theo từ: "4 2" và "4\n2" như nhau)
+      setProgress("Đang gửi kết quả lên máy chấm...");
       const gradeRes = await fetch('/api/grade', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ kind: 'HSG', week, category, problem, code, results: fingerprints })
+          body: JSON.stringify({ kind: 'HSG', strict, week, category, problem, code, results: fingerprints })
       });
       const grade = await gradeRes.json();
       if (!gradeRes.ok || !grade.token) {
           throw new Error(grade.error || "Máy chấm không phản hồi");
       }
 
+      const fmt = (ms?: number) => (ms === undefined ? "" : (ms / 1000).toFixed(2) + "s");
       const verdictOf = new Map<string, any>((grade.tests || []).map((v: any) => [v.name, v]));
-      const testResults = localRuns.map(run => {
+      const testResults: any[] = localRuns.map(run => {
+          if (run.tle) {
+              return {
+                  name: run.name, status: "QUÁ THỜI GIAN", css: "bg-orange-50 border-orange-200 text-orange-700",
+                  time: run.skipped ? "bỏ qua" : "> " + (limitMs / 1000) + "s",
+                  note: run.skipped ? "Không chạy vì 2 test trước cùng subtask đã quá thời gian." : "Thuật toán chưa đủ nhanh với dữ liệu lớn."
+              };
+          }
           if (run.err !== undefined) {
-              return { name: run.name, status: "LỖI CHẠY CODE", css: "bg-amber-50 border-amber-200 text-amber-700", err: run.err };
+              return { name: run.name, status: "LỖI CHẠY CODE", css: "bg-amber-50 border-amber-200 text-amber-700", err: run.err, time: fmt(run.ms) };
           }
           const v = verdictOf.get(run.name);
           if (v && v.status === "DUNG") {
-              return { name: run.name, status: "ĐÚNG", css: "bg-emerald-50 border-emerald-200 text-emerald-700" };
+              return { name: run.name, status: "ĐÚNG", css: "bg-emerald-50 border-emerald-200 text-emerald-700", time: fmt(run.ms) };
           }
-          return { name: run.name, status: "SAI", css: "bg-rose-50 border-rose-200 text-rose-700", expected: v?.expected, actual: run.actual };
+          return { name: run.name, status: "SAI", css: "bg-rose-50 border-rose-200 text-rose-700", expected: v?.expected, actual: run.actual, time: fmt(run.ms) };
       });
       const passedCount = grade.passed;
 
       setResults(testResults);
+      if (grade.subtasks) {
+          setSubtaskSummary({ subtasks: grade.subtasks, score: grade.score, maxScore: grade.maxScore });
+      }
 
       // Lưu lịch sử
       const history = JSON.parse(localStorage.getItem('submissionHistory') || '[]');
-      history.unshift({ date: new Date().toLocaleString('vi-VN'), week, problem, score: passedCount, maxScore: grade.total, code });
+      history.unshift({ date: new Date().toLocaleString('vi-VN'), week, problem, score: strict ? grade.score : passedCount, maxScore: grade.maxScore, code });
       localStorage.setItem('submissionHistory', JSON.stringify(history.slice(0, 30)));
 
-      const firstError = testResults.find((r: any) => r.err)?.err || (passedCount < grade.total ? "Sai Logic / Không khớp Output" : "Hoàn hảo");
+      const nTle = testResults.filter((r: any) => r.status === "QUÁ THỜI GIAN").length;
+      const subtaskNote = grade.subtasks
+          ? grade.subtasks.map((st: any) => `${st.ten}: ${st.dung}/${st.tong} test (${st.dat}/${st.diem}đ)`).join("; ") + (nTle ? `; ${nTle} test quá thời gian` : "") + ". "
+          : "";
+      const firstError = subtaskNote + ((testResults.find((r: any) => r.err)?.err || "").slice(0, 300) || (passedCount < grade.total ? "Sai Logic / Không khớp Output" : "Hoàn hảo"));
 
       await fetch('/api/sheets', {
           method: 'POST',
@@ -203,8 +237,8 @@ sys.stdout = io.StringIO()
               week,
               category,
               problem,
-              score: passedCount,
-              maxScore: grade.total,
+              score: grade.score,
+              maxScore: grade.maxScore,
               errorMsg: firstError,
               code: code,
               gradedCode: code,
@@ -216,6 +250,7 @@ sys.stdout = io.StringIO()
       alert("Lỗi: " + e.message);
     } finally {
       setIsLoading(false);
+      setProgress("");
     }
   };
 
@@ -228,7 +263,13 @@ sys.stdout = io.StringIO()
       content += `Bài thi: ${problem}\n`;
       content += `Thời gian nộp: ${new Date().toLocaleString('vi-VN')}\n`;
       content += `---------------------------------------\n`;
-      content += `Tổng điểm: ${results.filter(r => r.status.includes('ĐÚNG')).length} / ${results.length}\n`;
+      content += `Số test đúng: ${results.filter(r => r.status.includes('ĐÚNG')).length} / ${results.length}\n`;
+      if (subtaskSummary) {
+          content += `Điểm: ${subtaskSummary.score} / ${subtaskSummary.maxScore}\n`;
+          subtaskSummary.subtasks.forEach((st: any) => {
+              content += `   ${st.ten}: ${st.dung}/${st.tong} test -> ${st.dat}/${st.diem} điểm\n`;
+          });
+      }
       content += `---------------------------------------\n`;
       content += `CHI TIẾT TEST CASES:\n`;
       results.forEach(res => {
@@ -257,7 +298,6 @@ sys.stdout = io.StringIO()
 
   return (
     <main className="min-h-screen bg-slate-50 p-4 md:p-10 font-sans text-slate-800 selection:bg-indigo-500/20">
-      <Script src="https://cdn.jsdelivr.net/pyodide/v0.25.0/full/pyodide.js" />
       
       <div className="max-w-7xl mx-auto flex flex-col lg:flex-row gap-6">
         
@@ -380,7 +420,7 @@ sys.stdout = io.StringIO()
                   {isLoading ? (
                     <>
                       <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
-                      Đang chấm...
+                      {progress || "Đang chấm..."}
                     </>
                   ) : (
                     <>
@@ -399,7 +439,11 @@ sys.stdout = io.StringIO()
                 defaultLanguage="python"
                 theme="vs-dark"
                 value={code}
-                onChange={(val) => setCode(val || "")}
+                onChange={(val) => {
+                  setCode(val || "");
+                  // Bắt đầu tải Python ngầm khi học sinh bắt đầu gõ code, lúc chấm không phải chờ
+                  getRunner().warmup().catch(() => {});
+                }}
                 options={{
                   minimap: { enabled: false },
                   fontSize: 15,
@@ -418,6 +462,28 @@ sys.stdout = io.StringIO()
               Báo Cáo Test Cases {results.length > 0 && <span className="ml-1 px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded-full text-xs">(Đạt {results.filter(r => r.status === "ĐÚNG").length}/{results.length})</span>}
             </h3>
             
+            {strictMode && (
+              <div className="mb-3 text-xs font-semibold text-orange-800 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2 shrink-0">
+                ⏱️ Chấm chuẩn HSG: giới hạn {(timeLimitMs / 1000).toLocaleString('vi-VN')} giây/test, điểm tính theo subtask (thang 10). Python trên trình duyệt chạy chậm hơn máy thi nên giới hạn đã được nới.
+              </div>
+            )}
+
+            {subtaskSummary && (
+              <div className="mb-4 grid grid-cols-1 sm:grid-cols-3 gap-3 shrink-0">
+                <div className="p-3 rounded-2xl bg-indigo-600 text-white flex flex-col justify-center shadow">
+                  <span className="text-xs font-semibold opacity-80">Tổng điểm</span>
+                  <span className="text-2xl font-black">{subtaskSummary.score} / {subtaskSummary.maxScore}</span>
+                </div>
+                {subtaskSummary.subtasks.map((st: any) => (
+                  <div key={st.ten} className={"p-3 rounded-2xl border flex flex-col justify-center " + (st.dung === st.tong ? "bg-emerald-50 border-emerald-200 text-emerald-800" : st.dung === 0 ? "bg-rose-50 border-rose-200 text-rose-800" : "bg-amber-50 border-amber-200 text-amber-800")}>
+                    <span className="text-xs font-bold">{st.ten}</span>
+                    <span className="text-lg font-black">{st.dat} / {st.diem} điểm</span>
+                    <span className="text-xs font-semibold opacity-80">{st.dung}/{st.tong} test đúng</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {results.length === 0 && !isLoading && (
               <div className="flex flex-col items-center justify-center h-full flex-1 text-slate-400">
                 <svg className="w-12 h-12 mb-3 text-slate-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
@@ -435,7 +501,9 @@ sys.stdout = io.StringIO()
                               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                             )}
                             {res.name}: {res.status}
+                            {res.time && <span className="ml-auto text-xs font-mono font-semibold opacity-70">{res.time}</span>}
                         </div>
+                        {res.note && <div className="mt-2 text-xs font-semibold opacity-80">{res.note}</div>}
                         {res.expected && (
                             <div className="mt-3 text-xs bg-white/60 p-3 rounded-xl border border-black/5 space-y-2 flex-1 shadow-inner">
                                 <div className="flex gap-2">
