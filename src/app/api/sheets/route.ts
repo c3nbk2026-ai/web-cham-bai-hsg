@@ -13,7 +13,11 @@ import { SCORE_SPREADSHEET_ID, EXAM_SPREADSHEET_ID } from '@/lib/server/google';
 // Điểm HSG (BangDiem_*) ghi vào bảng điểm đội tuyển; điểm KTGK (DiemThucHanh, DanhSachHS) ghi vào sheet Phòng thi
 const OLD_SPREADSHEET_ID = SCORE_SPREADSHEET_ID;
 const NEW_SPREADSHEET_ID = EXAM_SPREADSHEET_ID;
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+import { generateWithFallback, geminiKeys } from '@/lib/server/gemini';
+const GEMINI_API_KEY = geminiKeys().join(","); // chỉ dùng để kiểm tra "đã cấu hình key chưa"
+
+// Cho phép hàm chạy tối đa 60 giây (ghi Sheet + AI chấm vớt)
+export const maxDuration = 60;
 
 const KTGK_PROBLEMS: Record<string, { title: string, desc: string }> = {
     'NHAPAM': {
@@ -98,74 +102,42 @@ Quy định barem điểm vớt khuyến khích tư duy thuật toán (thang đi
 5. [0 ĐIỂM] NẾU CODE HOÀN TOÀN RỖNG, BỊ XÓA HẾT MÃ NGUỒN, LẠC ĐỀ HOÀN TOÀN HOẶC CHÉP LINH TINH: CHO 0 ĐIỂM.
 6. Viết lời nhận xét ngắn gọn (1 câu tiếng Việt nhận xét đúng nội dung) và KẾT QUẢ ĐIỂM SỐ CUỐI CÙNG LÀ MỘT CON SỐ DUY NHẤT Ở CUỐI CÂU.`;
 
-    const CANDIDATE_MODELS = [
-        'gemini-3.8-flash',
-        'gemini-3.5-flash',
-        'gemini-3.5-flash-lite',
-        'gemini-2.5-flash'
-    ];
-
-    let lastError = "";
-
-    for (const model of CANDIDATE_MODELS) {
-        try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 3.5s timeout
-
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + GEMINI_API_KEY.trim(), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                signal: controller.signal,
-                body: JSON.stringify({
-                    contents: [{
-                        parts: [{
-                            text: promptText
-                        }]
-                    }]
-                })
-            });
-            clearTimeout(timeoutId);
-            const data = await response.json();
-            
-            if (data.error) {
-                lastError = data.error.message;
-                continue;
-            }
-
-            const parts = data.candidates?.[0]?.content?.parts || [];
-            const textParts = parts.filter((p: any) => !p.thought && p.text);
-            const finalContent = (textParts.length > 0 ? textParts.map((p: any) => p.text).join("\n") : parts.map((p: any) => p.text).join("\n")).trim();
-            
-            const matches = finalContent.match(/\d+(\.\d+)?/g);
-            const numStr = matches ? matches[matches.length - 1] : "0";
-            let num = parseFloat(numStr);
-            if (isNaN(num)) num = 0;
-            const maxScoreNum = parseFloat(maxScore.toString()) || 3.0;
-
-            // Nếu AI trả về điểm theo thang 10 (ví dụ 6.7 hoặc 7) trong khi bài thi thang 3.0 điểm
-            if (num > 3.0 && maxScoreNum <= 3.0) {
-                num = Math.round((num / 10 * 3.0) * 10) / 10;
-            }
-            num = Math.min(maxScoreNum, num);
-            
-            let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " ").trim();
-            // Lọc bỏ các từ quy đổi thang 10 nếu AI lỡ viết
-            reasoning = reasoning.replace(/\b(?:6\.7|3\.3|10|thang 10|qui đổi|quy đổi)\b/gi, "").trim();
-            if (reasoning.length > 150) {
-                reasoning = reasoning.substring(0, 150) + "...";
-            }
-
-            return {
-                score: num,
-                reasoning: reasoning || "Không trích xuất được lời phê"
-            };
-        } catch (e: any) {
-            lastError = e.message;
-        }
+    let finalContent = "";
+    try {
+        const result = await generateWithFallback({
+            contents: [{ role: 'user', parts: [{ text: promptText }] }],
+            perAttemptMs: 8_000,
+            deadlineMs: 20_000,
+        });
+        finalContent = result.text;
+    } catch (e: any) {
+        console.warn("AI chấm vớt lỗi:", e?.message);
+        return { score: 0, reasoning: "AI chấm vớt tạm thời không khả dụng, chờ giáo viên xem lại." };
     }
 
-    console.warn("AI chấm vớt lỗi:", lastError);
-    return { score: 0, reasoning: "AI chấm vớt tạm thời không khả dụng, chờ giáo viên xem lại." };
+    const matches = finalContent.match(/\d+(\.\d+)?/g);
+    const numStr = matches ? matches[matches.length - 1] : "0";
+    let num = parseFloat(numStr);
+    if (isNaN(num)) num = 0;
+    const maxScoreNum = parseFloat(maxScore.toString()) || 3.0;
+
+    // Nếu AI trả về điểm theo thang 10 (ví dụ 6.7 hoặc 7) trong khi bài thi thang 3.0 điểm
+    if (num > 3.0 && maxScoreNum <= 3.0) {
+        num = Math.round((num / 10 * 3.0) * 10) / 10;
+    }
+    num = Math.min(maxScoreNum, num);
+    
+    let reasoning = finalContent.replace(new RegExp(numStr + "\\s*$"), "").replace(/\n/g, " ").trim();
+    // Lọc bỏ các từ quy đổi thang 10 nếu AI lỡ viết
+    reasoning = reasoning.replace(/\b(?:6\.7|3\.3|10|thang 10|qui đổi|quy đổi)\b/gi, "").trim();
+    if (reasoning.length > 150) {
+        reasoning = reasoning.substring(0, 150) + "...";
+    }
+
+    return {
+        score: num,
+        reasoning: reasoning || "Không trích xuất được lời phê"
+    };
 }
 
 export async function POST(req: Request) {

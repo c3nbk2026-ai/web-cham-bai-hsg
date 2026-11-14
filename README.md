@@ -16,7 +16,9 @@ npm run dev     # mở http://localhost:3000
 | `GOOGLE_CREDENTIALS` | Có | Nội dung file JSON của service account Google Sheets |
 | `GOOGLE_SHEETS_ID` | Không | Bảng điểm đội tuyển HSG (có ID mặc định) |
 | `GOOGLE_EXAM_SHEETS_ID` | Không | Sheet Phòng thi KTGK lớp học (có ID mặc định) |
-| `GEMINI_API_KEY` | Có | Key Gemini cho trợ giảng AI và chấm vớt |
+| `GEMINI_API_KEYS` | Có | **Nhiều** key Gemini, cách nhau bởi dấu phẩy: `key1,key2,key3`. Key hết hạn mức hoặc bị lỗi sẽ tự chuyển sang key khác |
+| `GEMINI_API_KEY` | Không | Cách cũ (1 key), vẫn dùng được, được gộp chung với `GEMINI_API_KEYS` |
+| `GEMINI_MODELS` | Không | Danh sách model theo thứ tự ưu tiên, ví dụ `gemini-3.8-flash,gemini-3.7-flash,gemini-2.5-flash`. Bỏ trống thì dùng danh sách mặc định trong `src/lib/server/gemini.ts` |
 | `GRADE_SECRET` | Nên có | Chuỗi bí mật bất kỳ (≥ 32 ký tự) để ký điểm. Nếu không đặt, hệ thống tự suy ra từ `GOOGLE_CREDENTIALS` |
 
 ## Cấu trúc dữ liệu đề – QUAN TRỌNG

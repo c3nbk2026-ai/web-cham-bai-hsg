@@ -102,10 +102,14 @@ export default function TuHocPage() {
         setAttachedFile(null);
         setIsChatLoading(true);
 
+        // Chờ tối đa 65 giây, quá thời gian thì báo cho học sinh hỏi lại
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 65000);
         try {
             const res = await fetch("/api/chat", {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
+                signal: controller.signal,
                 body: JSON.stringify({
                     message: newMsg.text,
                     documentName: selectedDoc.displayName || selectedDoc.name,
@@ -113,13 +117,17 @@ export default function TuHocPage() {
                     attachment: attachedFile || undefined
                 })
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({ error: "Trợ giảng AI đang bận, em hỏi lại sau ít phút nhé." }));
             if (data.error) throw new Error(data.error);
             
             setChatMessages([...newHistory, { role: 'model', text: data.reply }]);
         } catch (err: any) {
-            setChatMessages([...newHistory, { role: 'model', text: "Lỗi: " + err.message }]);
+            const text = err?.name === 'AbortError'
+                ? "Trợ giảng AI đang trả lời chậm, em bấm gửi lại câu hỏi nhé."
+                : err.message;
+            setChatMessages([...newHistory, { role: 'model', text }]);
         } finally {
+            clearTimeout(timeoutId);
             setIsChatLoading(false);
         }
     };

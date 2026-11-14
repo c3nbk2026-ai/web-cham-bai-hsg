@@ -80,24 +80,32 @@ export default function LuyenDePage() {
         setAttachedFile(null);
         setIsChatLoading(true);
 
+        // Chờ tối đa 65 giây, quá thời gian thì báo cho học sinh hỏi lại
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 65000);
         try {
             const res = await fetch("/api/chat", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
+                signal: controller.signal,
                 body: JSON.stringify({
                     messages: newHistory,
                     documentName: selectedExam.title + " (Tuần " + selectedExam.weekNum + ")"
                 })
             });
-            const data = await res.json();
+            const data = await res.json().catch(() => ({}));
             if (data.reply) {
                 setChatMessages([...newHistory, { role: 'model', text: data.reply }]);
             } else {
-                setChatMessages([...newHistory, { role: 'model', text: "Lỗi kết nối hoặc AI không phản hồi." }]);
+                setChatMessages([...newHistory, { role: 'model', text: data.error || "Trợ giảng AI đang bận, em hỏi lại sau ít phút nhé." }]);
             }
-        } catch (error) {
-            setChatMessages([...newHistory, { role: 'model', text: "Đã xảy ra lỗi khi gửi tin nhắn." }]);
+        } catch (error: any) {
+            const text = error?.name === 'AbortError'
+                ? "Trợ giảng AI đang trả lời chậm, em bấm gửi lại câu hỏi nhé."
+                : "Đã xảy ra lỗi khi gửi tin nhắn.";
+            setChatMessages([...newHistory, { role: 'model', text }]);
         }
+        clearTimeout(timeoutId);
         setIsChatLoading(false);
     };
 

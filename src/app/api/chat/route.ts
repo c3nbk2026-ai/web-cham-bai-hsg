@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server';
 
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+import { generateWithFallback, geminiKeys } from '@/lib/server/gemini';
+
+// Cho phép hàm chạy tối đa 60 giây (đủ để thử nhiều model/key)
+export const maxDuration = 60;
 
 // ===== GIỚI HẠN SỬ DỤNG (tránh bị lạm dụng làm hết hạn mức Gemini) =====
 // Cả phòng máy thường dùng chung 1 địa chỉ IP, nên hạn mức theo IP đặt rộng rãi.
@@ -28,7 +31,7 @@ function validAttachment(a: any): boolean {
 
 export async function POST(req: Request) {
     try {
-        if (!GEMINI_API_KEY) {
+        if (geminiKeys().length === 0) {
             return NextResponse.json({ error: "Hệ thống chưa cấu hình AI (Thiếu API Key)." }, { status: 500 });
         }
         const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
@@ -116,56 +119,15 @@ Học sinh cần tự rèn luyện tư duy thuật toán và tự tay viết cod
             parts: userParts
         });
 
-        const CANDIDATE_MODELS = [
-            'gemini-3.8-flash',
-            'gemini-3.5-flash',
-            'gemini-3.5-flash-lite'
-        ];
+        // Thử lần lượt các model theo thứ tự ưu tiên, mỗi model thử với nhiều API key
+        const result = await generateWithFallback({
+            systemInstruction,
+            contents,
+            perAttemptMs: 25_000,
+            deadlineMs: 55_000,
+        });
+        const reply = result.text || "Xin lỗi, thầy/cô không thể trả lời lúc này.";
 
-        let lastErrorMessage = "";
-        let successfulData: any = null;
-
-        for (const model of CANDIDATE_MODELS) {
-            try {
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=` + GEMINI_API_KEY.trim(), {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        systemInstruction: { parts: [{ text: systemInstruction }] },
-                        contents: contents
-                    })
-                });
-
-                const data = await response.json();
-                
-                if (data.error) {
-                    console.warn(`Model ${model} báo lỗi:`, data.error.message);
-                    lastErrorMessage = data.error.message;
-                    continue; // Thử model kế tiếp
-                }
-
-                if (data.candidates && data.candidates.length > 0) {
-                    successfulData = data;
-                    break; // Thành công!
-                }
-            } catch (err: any) {
-                console.warn(`Gọi model ${model} thất bại:`, err.message);
-                lastErrorMessage = err.message;
-            }
-        }
-
-        if (!successfulData) {
-            throw new Error(lastErrorMessage || "Tất cả model AI đều đang quá tải hoặc không khả dụng. Vui lòng thử lại sau.");
-        }
-
-        const candidate = successfulData.candidates?.[0];
-        const parts = candidate?.content?.parts || [];
-        const validParts = parts.filter((p: any) => !p.thought && p.text);
-        const reply = (validParts.length > 0
-            ? validParts.map((p: any) => p.text).join("\n")
-            : parts.map((p: any) => p.text).join("\n")
-        ).trim() || "Xin lỗi, thầy/cô không thể trả lời lúc này.";
-        
         return NextResponse.json({ reply });
     } catch (error: any) {
         console.error("Chat API Error:", error);
