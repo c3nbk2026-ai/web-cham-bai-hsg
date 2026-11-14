@@ -39,7 +39,7 @@ và lời giải sang `private-data/` trước khi đẩy lên mạng.
 3. Máy chủ so với đáp án, tính điểm và trả về **chữ ký điểm** (`gradeToken`).
 4. `/api/sheets` chỉ ghi điểm khi chữ ký hợp lệ và khớp đúng mã nguồn đã chấm. Không có chữ ký → điểm tự động = 0, ghi chú "chờ GV xem lại".
 
-Ở chế độ **Tự học**, test sai vẫn hiện "Mẫu" (đáp án) để học sinh đối chiếu. Ở **Đề thi** thì không.
+Ở trang **Nộp bài** (cả Tự học và Đề thi), test sai vẫn hiện "Mẫu" để học sinh đối chiếu. **Phòng thi KTGK** thì không hiện.
 
 ## Bảng tính Google Sheet (hai bảng)
 

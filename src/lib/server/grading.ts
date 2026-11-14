@@ -27,7 +27,7 @@ export interface ClientResult {
 export interface TestVerdict {
     name: string;
     status: 'DUNG' | 'VOT' | 'SAI';
-    expected?: string; // chỉ trả về ở chế độ Tự học
+    expected?: string; // chỉ trả về ở trang Nộp bài (HSG), không trả về ở Phòng thi KTGK
 }
 
 export interface GradeResult {
@@ -88,7 +88,9 @@ export async function gradeSubmission(body: any): Promise<GradeResult> {
         pName = problem.replace(/^TEST_/i, '');
         const sub = category === 'TL_TU_HOC' ? 'BO_TEST' : 'TestCases';
         baseDir = path.join(PRIVATE_DATA_DIR, week, category, sub, problem);
-        showExpected = category === 'TL_TU_HOC';
+        // Trang Nộp bài (luyện tập HSG): test sai hiện "Mẫu" để học sinh đối chiếu, cả Tự học lẫn Đề thi.
+        // Phòng thi KTGK thì KHÔNG hiện.
+        showExpected = true;
     }
 
     const tests = listTests(baseDir, pName);
