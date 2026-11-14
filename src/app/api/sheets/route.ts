@@ -9,8 +9,10 @@ function safeCell(v: any) {
     return /^[=+\-@]/.test(v) ? "'" + v : v;
 }
 
-const OLD_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID || "YOUR_SPREADSHEET_ID_HERE";
-const NEW_SPREADSHEET_ID = "1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M";
+import { SPREADSHEET_ID } from '@/lib/server/google';
+// Mọi tab (BangDiem_*, DiemThucHanh, DanhSachHS) nằm chung một bảng tính
+const OLD_SPREADSHEET_ID = SPREADSHEET_ID;
+const NEW_SPREADSHEET_ID = SPREADSHEET_ID;
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
 const KTGK_PROBLEMS: Record<string, { title: string, desc: string }> = {
@@ -255,9 +257,6 @@ export async function POST(req: Request) {
             targetRange = 'DiemThucHanh!A:K';
         }
 
-        if (targetSpreadsheetId === "YOUR_SPREADSHEET_ID_HERE") {
-            return NextResponse.json({ success: true, demo: true });
-        }
 
         try {
             await sheets.spreadsheets.values.append({

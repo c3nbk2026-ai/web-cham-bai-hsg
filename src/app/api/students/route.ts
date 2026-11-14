@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 
-const SPREADSHEET_ID = "1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M";
+import { SPREADSHEET_ID } from '@/lib/server/google';
 
 export const dynamic = 'force-dynamic';
 

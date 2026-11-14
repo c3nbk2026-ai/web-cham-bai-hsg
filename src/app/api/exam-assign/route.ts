@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getSheetsClient, EXAM_SPREADSHEET_ID } from '@/lib/server/google';
+import { getSheetsClient, SPREADSHEET_ID } from '@/lib/server/google';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +9,7 @@ const norm = (s: string) => (s || "").trim().toLowerCase();
 async function findStudentRow(studentName: string, className: string) {
     const sheets = getSheetsClient();
     const response = await sheets.spreadsheets.values.get({
-        spreadsheetId: EXAM_SPREADSHEET_ID,
+        spreadsheetId: SPREADSHEET_ID,
         range: 'DanhSachHS!C2:F',
     });
     const rows = response.data.values || [];
@@ -73,7 +73,7 @@ export async function POST(req: Request) {
         }
 
         await found.sheets.spreadsheets.values.update({
-            spreadsheetId: EXAM_SPREADSHEET_ID,
+            spreadsheetId: SPREADSHEET_ID,
             range: `DanhSachHS!F${found.rowIndex}`,
             valueInputOption: 'RAW',
             requestBody: { values: [[examName]] },

@@ -14,7 +14,7 @@ npm run dev     # mở http://localhost:3000
 | Tên | Bắt buộc | Ý nghĩa |
 | --- | --- | --- |
 | `GOOGLE_CREDENTIALS` | Có | Nội dung file JSON của service account Google Sheets |
-| `GOOGLE_SHEETS_ID` | Có | Bảng tính điểm Đại trà / Đội tuyển |
+| `GOOGLE_SHEETS_ID` | Có | ID bảng tính Google Sheet DUY NHẤT của app (mặc định `1UIrvCAp3NRE6CVhux1jOdRxyQ1ZcwuYmpVLUJ9KdprE`) |
 | `GEMINI_API_KEY` | Có | Key Gemini cho trợ giảng AI và chấm vớt |
 | `GRADE_SECRET` | Nên có | Chuỗi bí mật bất kỳ (≥ 32 ký tự) để ký điểm. Nếu không đặt, hệ thống tự suy ra từ `GOOGLE_CREDENTIALS` |
 
@@ -40,7 +40,18 @@ và lời giải sang `private-data/` trước khi đẩy lên mạng.
 
 Ở chế độ **Tự học**, test sai vẫn hiện "Mẫu" (đáp án) để học sinh đối chiếu. Ở **Đề thi** thì không.
 
-## Phòng thi (tab `CauHinh` trên Google Sheet)
+## Bảng tính Google Sheet (một bảng duy nhất)
+
+| Tab | Dùng cho | Cột |
+| --- | --- | --- |
+| `BangDiem_DaiTra`, `BangDiem_DoiTuyen` | Điểm luyện tập HSG (trang Nộp bài) | A–K |
+| `CauHinh` | Phòng thi KTGK lớp học | A: tên, B: giá trị (`MaPhongThi`, `MatKhauGiamThi`, `ThoiGianThi`, `LopDangThi`) |
+| `DanhSachHS` | Học sinh lớp học | C: HoTen, D: Lop, E: SoLanThi, F: MaDe, G: TrangThai |
+| `DiemThucHanh` | Điểm KTGK thực hành | A–K |
+
+Tài khoản dịch vụ (service account) trong `GOOGLE_CREDENTIALS` phải có quyền **Người chỉnh sửa** trên bảng tính này.
+
+## Phòng thi (tab `CauHinh`)
 
 - `MaPhongThi`, `MatKhauGiamThi`: được kiểm tra trên máy chủ (`/api/exam-auth`), không gửi về trình duyệt. **Bắt buộc phải có**, không còn mật khẩu mặc định.
 - Ô Mã đề (cột F tab `DanhSachHS`) chỉ được ghi khi đang trống. Muốn cho học sinh bốc lại đề: xóa ô đó.

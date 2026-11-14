@@ -1,8 +1,15 @@
 import { google } from 'googleapis';
 import path from 'path';
 
-/** Bảng tính dùng cho phòng thi KTGK (DanhSachHS, CauHinh, DiemThucHanh). */
-export const EXAM_SPREADSHEET_ID = "1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M";
+/**
+ * App dùng MỘT bảng tính Google Sheet duy nhất, gồm các tab:
+ *  - BangDiem_DaiTra, BangDiem_DoiTuyen : điểm luyện tập HSG
+ *  - CauHinh       : cấu hình Phòng thi KTGK (MaPhongThi, MatKhauGiamThi, ThoiGianThi, LopDangThi)
+ *  - DanhSachHS    : danh sách học sinh lớp học (C: HoTen, D: Lop, E: SoLanThi, F: MaDe, G: TrangThai)
+ *  - DiemThucHanh  : điểm KTGK thực hành
+ * Đặt GOOGLE_SHEETS_ID trên Vercel; nếu thiếu thì dùng ID mặc định bên dưới.
+ */
+export const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID || "1UIrvCAp3NRE6CVhux1jOdRxyQ1ZcwuYmpVLUJ9KdprE";
 
 export function getSheetsClient(readonly = false) {
     const scopes = [readonly
