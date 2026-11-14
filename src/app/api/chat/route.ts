@@ -2,13 +2,41 @@ import { NextResponse } from 'next/server';
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
+// ===== GIỚI HẠN SỬ DỤNG (tránh bị lạm dụng làm hết hạn mức Gemini) =====
+// Cả phòng máy thường dùng chung 1 địa chỉ IP, nên hạn mức theo IP đặt rộng rãi.
+const RATE_WINDOW_MS = 10 * 60 * 1000;   // 10 phút
+const RATE_MAX_PER_IP = 150;             // tối đa 150 câu hỏi / 10 phút / 1 IP
+const MAX_MESSAGE_CHARS = 6000;          // 1 câu hỏi tối đa 6.000 ký tự
+const MAX_HISTORY = 20;                  // chỉ gửi kèm 20 tin nhắn gần nhất
+const MAX_ATTACHMENT_BASE64 = 4_000_000; // tệp đính kèm tối đa ~3 MB
+const ALLOWED_MIME = /^(image\/(png|jpeg|webp|gif)|application\/pdf|text\/plain)$/;
+
+const hits = new Map<string, number[]>();
+function rateLimited(ip: string): boolean {
+    const now = Date.now();
+    const list = (hits.get(ip) || []).filter(t => now - t < RATE_WINDOW_MS);
+    list.push(now);
+    hits.set(ip, list);
+    if (hits.size > 5000) hits.clear();
+    return list.length > RATE_MAX_PER_IP;
+}
+
+function validAttachment(a: any): boolean {
+    return !!a && typeof a.mimeType === 'string' && ALLOWED_MIME.test(a.mimeType)
+        && typeof a.data === 'string' && a.data.length <= MAX_ATTACHMENT_BASE64;
+}
+
 export async function POST(req: Request) {
     try {
         if (!GEMINI_API_KEY) {
             return NextResponse.json({ error: "Hệ thống chưa cấu hình AI (Thiếu API Key)." }, { status: 500 });
         }
+        const ip = (req.headers.get('x-forwarded-for') || '').split(',')[0].trim() || 'unknown';
+        if (rateLimited(ip)) {
+            return NextResponse.json({ error: "Lớp mình hỏi AI nhiều quá, các em chờ vài phút rồi hỏi tiếp nhé." }, { status: 429 });
+        }
         const body = await req.json();
-        const documentName = body.documentName || "Tài liệu học tập";
+        const documentName = String(body.documentName || "Tài liệu học tập").slice(0, 200);
         
         // Hỗ trợ cả 2 định dạng từ /tu-hoc và /luyen-de
         let rawHistory = Array.isArray(body.history) ? body.history : [];
@@ -46,9 +74,18 @@ Học sinh cần tự rèn luyện tư duy thuật toán và tự tay viết cod
    - Giọng điệu ấm áp, ân cần, khích lệ và chuẩn mực sư phạm. Xưng "thầy/cô" và gọi học sinh là "em".
    - Luôn kết thúc câu trả lời bằng 1 câu hỏi gợi mở để học sinh tiếp tục động não và tương tác tiếp.`;
 
+        rawHistory = rawHistory.slice(-MAX_HISTORY);
+        userMessage = String(userMessage || "");
+        if (userMessage.length > MAX_MESSAGE_CHARS) {
+            return NextResponse.json({ error: `Câu hỏi quá dài (tối đa ${MAX_MESSAGE_CHARS} ký tự).` }, { status: 413 });
+        }
+        if (userAttachment && !validAttachment(userAttachment)) {
+            return NextResponse.json({ error: "Tệp đính kèm chỉ nhận ảnh, PDF hoặc văn bản, tối đa khoảng 3 MB." }, { status: 413 });
+        }
+
         const contents = rawHistory.map((msg: any) => {
             const parts: any[] = [];
-            if (msg.attachment) {
+            if (msg.attachment && validAttachment(msg.attachment)) {
                 parts.push({
                     inlineData: {
                         mimeType: msg.attachment.mimeType,
@@ -56,12 +93,12 @@ Học sinh cần tự rèn luyện tư duy thuật toán và tự tay viết cod
                     }
                 });
             }
-            if (msg.text) parts.push({ text: msg.text });
+            if (msg.text) parts.push({ text: String(msg.text).slice(0, MAX_MESSAGE_CHARS) });
             return {
                 role: msg.role === 'user' ? 'user' : 'model',
                 parts: parts
             };
-        });
+        }).filter((c: any) => c.parts.length > 0);
 
         const userParts: any[] = [];
         if (userAttachment) {
@@ -132,6 +169,6 @@ Học sinh cần tự rèn luyện tư duy thuật toán và tự tay viết cod
         return NextResponse.json({ reply });
     } catch (error: any) {
         console.error("Chat API Error:", error);
-        return NextResponse.json({ error: "Lỗi kết nối AI: " + error.message }, { status: 500 });
+        return NextResponse.json({ error: "Trợ giảng AI tạm thời không trả lời được, em thử lại sau ít phút nhé." }, { status: 500 });
     }
 }

@@ -1,36 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ProCoder VIP – Nền tảng luyện thi HSG Tin học (Python)
 
-## Getting Started
+Webapp Next.js cho đội tuyển HSG Tin học THPT Trần Phú – Đà Lạt: tự học, luyện đề Dạng 1–2, phòng thi KTGK, trợ giảng AI.
 
-First, run the development server:
+## Chạy trên máy
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev     # mở http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Biến môi trường (Vercel → Settings → Environment Variables)
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+| Tên | Bắt buộc | Ý nghĩa |
+| --- | --- | --- |
+| `GOOGLE_CREDENTIALS` | Có | Nội dung file JSON của service account Google Sheets |
+| `GOOGLE_SHEETS_ID` | Có | Bảng tính điểm Đại trà / Đội tuyển |
+| `GEMINI_API_KEY` | Có | Key Gemini cho trợ giảng AI và chấm vớt |
+| `GRADE_SECRET` | Nên có | Chuỗi bí mật bất kỳ (≥ 32 ký tự) để ký điểm. Nếu không đặt, hệ thống tự suy ra từ `GOOGLE_CREDENTIALS` |
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Cấu trúc dữ liệu đề – QUAN TRỌNG
 
-## Learn More
+| Thư mục | Công khai? | Chứa gì |
+| --- | --- | --- |
+| `public/data/TUAN x/...` | **Có** (ai cũng tải được) | Đề PDF/DOCX, tài liệu tự học, file vào `.INP`, `template.py` |
+| `private-data/TUAN x/...` | **Không** | Đáp án `.OUT`, lời giải mẫu `.py`, file chấm |
 
-To learn more about Next.js, take a look at the following resources:
+Máy chủ (`/api/grade`) đọc đáp án trong `private-data/` để chấm. Trình duyệt **không bao giờ** nhận được đáp án.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+**Khi thêm tuần mới:** cứ chép cả thư mục tuần (có `.INP` và `.OUT`) vào `public/data/` như trước,
+rồi chạy `Day_Bai_Len_Mang.bat`. File này tự chạy `node scripts/tach-dap-an.js` để chuyển mọi `.OUT`
+và lời giải sang `private-data/` trước khi đẩy lên mạng.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Cách chấm điểm (từ Giai đoạn 1)
 
-## Deploy on Vercel
+1. Trình duyệt tải `.INP`, chạy code học sinh bằng Pyodide.
+2. Trình duyệt chỉ gửi **mã băm (dấu vân tay)** của kết quả lên `/api/grade`, không gửi điểm.
+3. Máy chủ so với đáp án, tính điểm và trả về **chữ ký điểm** (`gradeToken`).
+4. `/api/sheets` chỉ ghi điểm khi chữ ký hợp lệ và khớp đúng mã nguồn đã chấm. Không có chữ ký → điểm tự động = 0, ghi chú "chờ GV xem lại".
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Ở chế độ **Tự học**, test sai vẫn hiện "Mẫu" (đáp án) để học sinh đối chiếu. Ở **Đề thi** thì không.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Phòng thi (tab `CauHinh` trên Google Sheet)
+
+- `MaPhongThi`, `MatKhauGiamThi`: được kiểm tra trên máy chủ (`/api/exam-auth`), không gửi về trình duyệt. **Bắt buộc phải có**, không còn mật khẩu mặc định.
+- Ô Mã đề (cột F tab `DanhSachHS`) chỉ được ghi khi đang trống. Muốn cho học sinh bốc lại đề: xóa ô đó.

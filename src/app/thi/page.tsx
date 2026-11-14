@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 import Script from "next/script";
+import { fingerprintOutput } from "@/lib/gradingShared";
 
 // Kiểu dữ liệu đề thi từ API
 interface ExamItem {
@@ -232,23 +233,30 @@ export default function ExamRoom() {
     setIsCheckingCode(true);
     setAuthError("");
     try {
-        const res = await fetch("/api/exam-config?t=" + Date.now());
-        const data = await res.json();
-        if (data.error) {
-            setAuthError("Lỗi: " + data.error);
+        // Mã phòng thi được kiểm tra TRÊN MÁY CHỦ, trình duyệt không biết mã thật
+        const res = await fetch("/api/exam-auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ kind: "room", value: roomCodeInput })
+        });
+        const auth = await res.json();
+        const data = auth.config || {};
+        if (auth.error) {
+            setAuthError("Lỗi: " + auth.error);
         } else {
-            const cleanInput = (roomCodeInput || "").trim().toUpperCase();
-            const cleanTarget = (data["MaPhongThi"] || "").trim().toUpperCase();
-            if (cleanTarget && cleanInput === cleanTarget) {
+            if (auth.ok) {
                 setExamConfig(data);
                 if (data["ThoiGianThi"]) {
                     setTimeLeft(parseInt(data["ThoiGianThi"]) * 60);
                 }
                 if (data["LopDangThi"]) {
                     const activeClass = data["LopDangThi"].trim();
-                    setClassName(activeClass);
-                    if (studentsData[activeClass] && studentsData[activeClass].length > 0) {
-                        setStudentName(studentsData[activeClass][0]);
+                    const isLocked = isStudentLocked || (typeof window !== 'undefined' && !!sessionStorage.getItem("locked_student_name"));
+                    if (!isLocked) {
+                        setClassName(activeClass);
+                        if (studentsData[activeClass] && studentsData[activeClass].length > 0) {
+                            setStudentName(studentsData[activeClass][0]);
+                        }
                     }
                 }
                 // Xóa trạng thái nộp bài cũ của ca trước nếu có
@@ -273,6 +281,8 @@ export default function ExamRoom() {
     try {
       sessionStorage.clear();
       sessionStorage.removeItem("exam_completed_submission");
+      sessionStorage.removeItem("locked_student_name");
+      sessionStorage.removeItem("locked_student_class");
       localStorage.removeItem("exam_device_locked_student");
       if (className && studentName) {
         localStorage.removeItem(getAssignedExamKey(className, studentName));
@@ -329,14 +339,23 @@ export default function ExamRoom() {
     setIsVerifyingTeacherPass(true);
     setTeacherUnlockError("");
     try {
-      const res = await fetch("/api/exam-config?t=" + Date.now());
-      const cfg = await res.json();
-      const correctPass = (cfg["MatKhauGiamThi"] || cfg["AdminPassword"] || "gv2026").trim();
-      
-      if (teacherPassInput.trim() === correctPass) {
+      // Mật khẩu giám thị được kiểm tra TRÊN MÁY CHỦ (không còn mật khẩu mặc định)
+      const res = await fetch("/api/exam-auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kind: "teacher", value: teacherPassInput })
+      });
+      const verify = await res.json();
+      const cfg = verify.config || {};
+
+      if (verify.error) {
+        setTeacherUnlockError(verify.error);
+      } else if (verify.ok) {
         try {
           sessionStorage.clear();
           sessionStorage.removeItem("exam_completed_submission");
+          sessionStorage.removeItem("locked_student_name");
+          sessionStorage.removeItem("locked_student_class");
           localStorage.removeItem("exam_device_locked_student");
           if (className && studentName) {
             localStorage.removeItem(getAssignedExamKey(className, studentName));
@@ -377,7 +396,7 @@ export default function ExamRoom() {
         setTeacherPassInput("");
         alert("Đã mở khóa phòng thi thành công! Thí sinh có thể chọn tên và bắt đầu thi.");
       } else {
-        setTeacherUnlockError("Mật khẩu Giáo viên không chính xác (kiểm tra ô B6 tab CauHinh)!");
+        setTeacherUnlockError("Mật khẩu Giáo viên không chính xác (kiểm tra dòng MatKhauGiamThi trong tab CauHinh)!");
       }
     } catch(e) {
       setTeacherUnlockError("Lỗi kết nối máy chủ để xác thực mật khẩu!");
@@ -489,6 +508,44 @@ export default function ExamRoom() {
 
     fetch("/api/tests").then(r => r.json()).then(setStructure);
 
+    // Nhận diện học sinh từ URL hoặc phiên sessionStorage (dành cho chế độ thi liên tục lý thuyết -> thực hành)
+    let initialStudentParam = "";
+    let initialClassParam = "";
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const sParam = params.get('student');
+      const cParam = params.get('class');
+      
+      if (sParam) {
+        initialStudentParam = decodeURIComponent(sParam).normalize('NFC').trim();
+        sessionStorage.setItem("locked_student_name", initialStudentParam);
+      } else {
+        initialStudentParam = (sessionStorage.getItem("locked_student_name") || "").normalize('NFC').trim();
+      }
+
+      if (cParam) {
+        initialClassParam = decodeURIComponent(cParam).normalize('NFC').trim();
+        sessionStorage.setItem("locked_student_class", initialClassParam);
+      } else {
+        initialClassParam = (sessionStorage.getItem("locked_student_class") || "").normalize('NFC').trim();
+      }
+
+      if (initialStudentParam) {
+        setStudentName(initialStudentParam);
+        setIsStudentLocked(true);
+      }
+      if (initialClassParam) {
+        setClassName(initialClassParam);
+      }
+
+      // Xóa query param trên URL sau khi nạp để bảo mật và tránh lưu vết trên thanh địa chỉ
+      if (sParam || cParam) {
+        try {
+          window.history.replaceState({}, '', window.location.pathname);
+        } catch(e) {}
+      }
+    }
+
     // Tự động tải cấu hình ca thi mới nhất từ Google Sheets (LopDangThi, ThoiGianThi)
     fetch("/api/exam-config?t=" + Date.now())
       .then(r => r.json())
@@ -498,25 +555,13 @@ export default function ExamRoom() {
           if (cfg["ThoiGianThi"]) {
             setTimeLeft(parseInt(cfg["ThoiGianThi"]) * 60);
           }
-          if (cfg["LopDangThi"]) {
+          // Chỉ áp dụng LopDangThi nếu học sinh KHÔNG bị khóa theo lớp từ phòng thi lý thuyết
+          if (cfg["LopDangThi"] && !initialClassParam) {
             setClassName(cfg["LopDangThi"].trim());
           }
         }
       })
       .catch(() => {});
-    
-    const params = new URLSearchParams(window.location.search);
-    const studentParam = params.get('student');
-    const classParam = params.get('class');
-    if (studentParam) { setStudentName(studentParam); setIsStudentLocked(true); }
-    if (classParam) { setClassName(classParam); }
-
-    // Xóa query param trên URL sau khi nạp để tránh học sinh ca sau bị kẹt cứng tên học sinh cũ
-    if (typeof window !== 'undefined' && (studentParam || classParam)) {
-      try {
-        window.history.replaceState({}, '', window.location.pathname);
-      } catch(e) {}
-    }
 
     fetch("/api/students?t=" + Date.now())
       .then(res => res.json())
@@ -529,23 +574,31 @@ export default function ExamRoom() {
             return;
         }
         setStudentsData(data);
-        const classes = Object.keys(data).sort();
-        if (classes.length > 0) {
-          if (classParam && data[classParam]) {
-            setClassName(classParam);
-            if (!studentParam && data[classParam].length > 0) {
-              setStudentName(data[classParam][0]);
-            }
+
+        // Nếu học sinh đã được khóa từ lý thuyết sang (chế độ thi liên tục)
+        if (initialStudentParam) {
+          setIsStudentLocked(true);
+          const targetClass = initialClassParam && data[initialClassParam] 
+            ? initialClassParam 
+            : Object.keys(data).find(c => data[c].some((s: string) => s.normalize('NFC').trim().toLowerCase() === initialStudentParam.toLowerCase())) || initialClassParam;
+
+          if (targetClass && data[targetClass]) {
+            setClassName(targetClass);
+            const exactMatch = data[targetClass].find((s: string) => s.normalize('NFC').trim().toLowerCase() === initialStudentParam.toLowerCase()
+            );
+            setStudentName(exactMatch || initialStudentParam);
           } else {
+            setStudentName(initialStudentParam);
+          }
+        } else {
+          // Chế độ tự do chọn học sinh
+          const classes = Object.keys(data).sort();
+          if (classes.length > 0) {
             setClassName(classes[0]);
-            if (!studentParam && data[classes[0]].length > 0) {
+            if (data[classes[0]].length > 0) {
               setStudentName(data[classes[0]][0]);
             }
           }
-        }
-        if (studentParam) {
-          setStudentName(studentParam);
-          setIsStudentLocked(true);
         }
       })
       .catch(() => console.log("Lỗi tải danh sách học sinh"));
@@ -625,12 +678,25 @@ export default function ExamRoom() {
 
   // Đảm bảo tên học sinh luôn thuộc lớp đang chọn, không bao giờ bị lệch sang lớp khác
   useEffect(() => {
+    if (isStudentLocked) {
+      // Đang ở chế độ khóa tên học sinh (chuyển từ lý thuyết sang):
+      // Tuyệt đối không reset về học sinh đầu danh sách. Tự động chuẩn hóa về tên khớp trong danh sách lớp nếu có
+      if (className && studentsData[className] && studentName) {
+        const match = studentsData[className].find((s: string) => s.normalize('NFC').trim().toLowerCase() === studentName.normalize('NFC').trim().toLowerCase()
+        );
+        if (match && match !== studentName) {
+          setStudentName(match);
+        }
+      }
+      return;
+    }
+
     if (className && studentsData[className] && studentsData[className].length > 0) {
       if (!studentName || !studentsData[className].includes(studentName)) {
         setStudentName(studentsData[className][0]);
       }
     }
-  }, [className, studentsData, studentName]);
+  }, [className, studentsData, studentName, isStudentLocked]);
 
   // HÀM TỐI GIẢN CODE MẪU: Bỏ các dòng chú thích rườm rà, chỉ giữ lại code sạch và làm nổi bật dòng điều kiện lặp
   const cleanTemplateCode = (raw: string) => {
@@ -1182,25 +1248,26 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
     isFinishedRef.current = true;
 
     const { deFolderName, problemName } = curExam;
-    // Tìm test cases: /data/DE_KTGK/Test_Case/De01/Test01/DIEM.INP
+    // Chỉ tải dữ liệu vào (.INP). Đáp án (.OUT) nằm trên máy chủ: máy chủ tự so và tính điểm.
     const testCaseBase = "/data/" + testFolder + "/Test_Case/" + deFolderName;
     
-    const testCases = [];
+    const testCases: { name: string, inp: string }[] = [];
     for (let i = 1; i <= 20; i++) {
       const pad = i.toString().padStart(2, "0");
       const base = testCaseBase + "/Test" + pad + "/" + problemName;
       const inp = await tryFetch(base + ".INP") ?? await tryFetch(base + ".inp");
-      const out = await tryFetch(base + ".OUT") ?? await tryFetch(base + ".out");
-      if (inp === null || out === null) break;
-      testCases.push({ name: "Test" + pad, inp, out: out.trim() });
+      if (inp === null) break;
+      testCases.push({ name: "Test" + pad, inp });
     }
 
     let finalScore = "Cho cham";
     let finalMax = "N/A";
     let finalMsg = "Vi pham: " + violationCount + " lan.";
+    let gradeToken = "";
+    let gradedTotal = testCases.length;
 
     if (testCases.length > 0) {
-      let passed = 0;
+      const fingerprints: any[] = [];
       try {
         const py = await getPyodideWithTimeout(8000);
         if (py) {
@@ -1224,26 +1291,32 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
                 runPromise,
                 new Promise<string>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 3000))
               ]);
-
-              const norm = (s: string) => (s || "").replace(/\r/g, "").split("\n").map((l: string) => l.trimEnd()).join("\n").trim();
-              const extractNums = (s: string) => (s || "").match(/-?\d+(\.\d+)?/g) || [];
-              const actualNums = extractNums(actual);
-              const expectedNums = extractNums(t.out);
-              const isSmartMatch = actualNums.length > 0 && actualNums.join(",") === expectedNums.join(",");
-
-              if (norm(actual) === norm(t.out)) {
-                passed++;
-              } else if (isSmartMatch) {
-                passed += 0.5; // Diem vot nếu sai định dạng nhưng đúng kết quả số
-              }
+              fingerprints.push({ name: t.name, ...(await fingerprintOutput(actual)) });
             } catch(e: any) {}
           }
         }
       } catch(e: any) {}
-      const scoreOnScale3 = (testCases.length > 0) ? (passed / testCases.length * 3).toFixed(1) : passed.toString();
-      finalScore = scoreOnScale3;
-      finalMax = "3";
-      finalMsg += " (Tu dong cham: " + passed + "/" + testCases.length + " Test dung -> " + scoreOnScale3 + "/3.0 diem)";
+
+      // Máy chủ so với đáp án và ký xác nhận điểm
+      try {
+        const gradeRes = await fetch('/api/grade', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind: 'KTGK', folder: testFolder, deFolderName, problem: problemName, code, results: fingerprints })
+        });
+        const g = await gradeRes.json();
+        if (gradeRes.ok && g.token) {
+          finalScore = g.score;
+          finalMax = String(g.maxScore);
+          gradeToken = g.token;
+          gradedTotal = g.total;
+          finalMsg += " (Tu dong cham: " + g.passed + "/" + g.total + " Test dung -> " + g.score + "/3.0 diem)";
+        } else {
+          finalMsg += " (Loi may cham: " + (g.error || gradeRes.status) + ")";
+        }
+      } catch(e: any) {
+        finalMsg += " (Loi ket noi may cham)";
+      }
     } else {
       finalMsg += " (Cham thu cong. Output: " + stdout.substring(0, 100).replace(/\n/g, " ") + ")";
     }
@@ -1270,7 +1343,9 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
             score: finalScore, 
             maxScore: finalMax, 
             errorMsg: finalMsg, 
-            code: fullSub 
+            code: fullSub,
+            gradedCode: code,
+            gradeToken
           })
         });
         clearTimeout(timeoutId);
@@ -1296,7 +1371,7 @@ py_run_result = json.dumps({"is_err": is_err, "output": formatted_res})
         maxScore: finalMax,
         problem: problemName,
         passed: testCases.length > 0 ? (finalScore + "/3.0") : "Đã nộp",
-        totalTests: testCases.length,
+        totalTests: gradedTotal,
         submittedAt: new Date().toLocaleTimeString('vi-VN') + " - " + new Date().toLocaleDateString('vi-VN'),
         studentName,
         className

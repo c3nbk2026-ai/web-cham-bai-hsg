@@ -1,120 +1,86 @@
 import { NextResponse } from 'next/server';
-import { google } from 'googleapis';
-import path from 'path';
-
-const SPREADSHEET_ID = "1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M";
+import { getSheetsClient, EXAM_SPREADSHEET_ID } from '@/lib/server/google';
 
 export const dynamic = 'force-dynamic';
 
-function getAuth() {
-    if (process.env.GOOGLE_CREDENTIALS) {
-        return new google.auth.GoogleAuth({
-            credentials: JSON.parse(process.env.GOOGLE_CREDENTIALS),
-            scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-        });
-    }
-    return new google.auth.GoogleAuth({
-        keyFile: path.join(process.cwd(), 'credentials.json'),
-        scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+const norm = (s: string) => (s || "").trim().toLowerCase();
+
+/** Tìm dòng của học sinh trong tab DanhSachHS (C: HoTen, D: Lop, E: SoLanThi, F: MaDe). */
+async function findStudentRow(studentName: string, className: string) {
+    const sheets = getSheetsClient();
+    const response = await sheets.spreadsheets.values.get({
+        spreadsheetId: EXAM_SPREADSHEET_ID,
+        range: 'DanhSachHS!C2:F',
     });
+    const rows = response.data.values || [];
+    for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        if (norm(row[0]) === norm(studentName) && norm(row[1]) === norm(className)) {
+            const assignedExam = row[3] ? String(row[3]).trim() : null;
+            return { sheets, rowIndex: i + 2, assignedExam: assignedExam || null };
+        }
+    }
+    return { sheets, rowIndex: 0, assignedExam: null as string | null };
 }
 
-// GET: Kiểm tra mã đề đã bốc của học sinh từ cột F (MaDe) tab DanhSachHS
+// GET: Kiểm tra mã đề đã bốc của học sinh (cột F)
 export async function GET(req: Request) {
     try {
         const { searchParams } = new URL(req.url);
         const studentName = searchParams.get('studentName')?.trim();
         const className = searchParams.get('className')?.trim();
+        if (!studentName || !className) {
+            return NextResponse.json({ error: "Thiếu tên hoặc lớp của học sinh" }, { status: 400 });
+        }
+        const found = await findStudentRow(studentName, className);
+        if (!found.rowIndex) return NextResponse.json({ found: false, assignedExam: null });
+        return NextResponse.json({ found: true, rowIndex: found.rowIndex, assignedExam: found.assignedExam });
+    } catch (error: any) {
+        console.error("API Exam Assign GET Error:", error);
+        return NextResponse.json({ error: "Lỗi kiểm tra mã đề" }, { status: 500 });
+    }
+}
 
+// POST: Ghi mã đề vừa bốc vào cột F.
+// Chỉ ghi khi ô F đang TRỐNG (học sinh chưa bốc đề, hoặc giáo viên đã xóa để cho thi lại).
+// Máy chủ tự tìm dòng theo tên + lớp, không tin số dòng do trình duyệt gửi.
+export async function POST(req: Request) {
+    try {
+        const body = await req.json();
+        const studentName = typeof body?.studentName === 'string' ? body.studentName : '';
+        const className = typeof body?.className === 'string' ? body.className : '';
+        const examName = typeof body?.examName === 'string' ? body.examName.trim() : '';
+
+        if (!examName || examName.length > 60) {
+            return NextResponse.json({ error: "Thiếu mã đề cần gán" }, { status: 400 });
+        }
         if (!studentName || !className) {
             return NextResponse.json({ error: "Thiếu tên hoặc lớp của học sinh" }, { status: 400 });
         }
 
-        const auth = getAuth();
-        const sheets = google.sheets({ version: 'v4', auth });
-
-        // Cột C: HoTen, D: Lop, E: SoLanThi, F: MaDe
-        const response = await sheets.spreadsheets.values.get({
-            spreadsheetId: SPREADSHEET_ID,
-            range: 'DanhSachHS!C2:F',
-        });
-
-        const rows = response.data.values || [];
-        const norm = (s: string) => (s || "").trim().toLowerCase();
-
-        for (let i = 0; i < rows.length; i++) {
-            const row = rows[i];
-            const rStudent = norm(row[0]);
-            const rClass = norm(row[1]);
-
-            if (rStudent === norm(studentName) && rClass === norm(className)) {
-                const rowIndex = i + 2; // Dòng thực tế trong Google Sheet (bắt đầu từ C2 là dòng 2)
-                const assignedExam = row[3] ? row[3].trim() : null; // Cột F là index 3 tính từ C
-                return NextResponse.json({
-                    found: true,
-                    rowIndex,
-                    assignedExam: assignedExam || null
-                });
-            }
-        }
-
-        return NextResponse.json({ found: false, assignedExam: null });
-    } catch (error: any) {
-        console.error("API Exam Assign GET Error:", error);
-        return NextResponse.json({ error: error.message || "Lỗi kiểm tra mã đề" }, { status: 500 });
-    }
-}
-
-// POST: Ghi mã đề đã bốc vào cột F của học sinh
-export async function POST(req: Request) {
-    try {
-        const body = await req.json();
-        const { studentName, className, examName, rowIndex } = body;
-
-        if (!examName) {
-            return NextResponse.json({ error: "Thiếu mã đề cần gán" }, { status: 400 });
-        }
-
-        const auth = getAuth();
-        const sheets = google.sheets({ version: 'v4', auth });
-
-        let targetRowIndex = rowIndex;
-
-        // Nếu client chưa có rowIndex, tìm dòng của học sinh
-        if (!targetRowIndex) {
-            const response = await sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: 'DanhSachHS!C2:D',
-            });
-            const rows = response.data.values || [];
-            const norm = (s: string) => (s || "").trim().toLowerCase();
-            for (let i = 0; i < rows.length; i++) {
-                const rStudent = norm(rows[i][0]);
-                const rClass = norm(rows[i][1]);
-                if (rStudent === norm(studentName) && rClass === norm(className)) {
-                    targetRowIndex = i + 2;
-                    break;
-                }
-            }
-        }
-
-        if (!targetRowIndex) {
+        const found = await findStudentRow(studentName, className);
+        if (!found.rowIndex) {
             return NextResponse.json({ error: "Không tìm thấy học sinh trong danh sách" }, { status: 404 });
         }
+        if (found.assignedExam) {
+            if (norm(found.assignedExam) === norm(examName)) {
+                return NextResponse.json({ success: true, rowIndex: found.rowIndex, examName: found.assignedExam });
+            }
+            return NextResponse.json({
+                error: `Học sinh đã có mã đề ${found.assignedExam}. Giáo viên cần xóa ô Mã đề (cột F) để cho bốc lại.`,
+                assignedExam: found.assignedExam,
+            }, { status: 409 });
+        }
 
-        // Cập nhật ô F{targetRowIndex} với mã đề
-        await sheets.spreadsheets.values.update({
-            spreadsheetId: SPREADSHEET_ID,
-            range: `DanhSachHS!F${targetRowIndex}`,
-            valueInputOption: 'USER_ENTERED',
-            requestBody: {
-                values: [[examName.trim()]],
-            },
+        await found.sheets.spreadsheets.values.update({
+            spreadsheetId: EXAM_SPREADSHEET_ID,
+            range: `DanhSachHS!F${found.rowIndex}`,
+            valueInputOption: 'RAW',
+            requestBody: { values: [[examName]] },
         });
-
-        return NextResponse.json({ success: true, rowIndex: targetRowIndex, examName: examName.trim() });
+        return NextResponse.json({ success: true, rowIndex: found.rowIndex, examName });
     } catch (error: any) {
         console.error("API Exam Assign POST Error:", error);
-        return NextResponse.json({ error: error.message || "Lỗi cập nhật mã đề" }, { status: 500 });
+        return NextResponse.json({ error: "Lỗi cập nhật mã đề" }, { status: 500 });
     }
 }

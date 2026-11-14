@@ -6,6 +6,7 @@ const Editor = dynamic(() => import("@monaco-editor/react"), { ssr: false });
 
 import Script from "next/script";
 import { useMode } from "@/components/ModeContext";
+import { fingerprintOutput } from "@/lib/gradingShared";
 
 export default function Home() {
   const { mode } = useMode();
@@ -101,21 +102,15 @@ export default function Home() {
       const py = await initPyodide();
       if (!py) throw new Error("Chưa tải được trình biên dịch Python.");
 
-      const testCases = [];
+      // Chỉ tải dữ liệu vào (.INP). Đáp án (.OUT) nằm trên máy chủ: máy chủ tự so và tính điểm.
+      const testCases: { name: string, inp: string }[] = [];
       const maxTests = category === "TL_TU_HOC" ? 10 : 20;
       for (let i = 1; i <= maxTests; i++) {
         const testFolder = `Test${i.toString().padStart(2, "0")}`;
         try {
           const inpRes = await fetch(getTestUrl(testFolder, "INP"));
-          const outRes = await fetch(getTestUrl(testFolder, "OUT"));
-          
-          if (!inpRes.ok || !outRes.ok) break;
-          
-          testCases.push({
-            name: testFolder,
-            inp: await inpRes.text(),
-            out: (await outRes.text()).trim(),
-          });
+          if (!inpRes.ok) break;
+          testCases.push({ name: testFolder, inp: await inpRes.text() });
         } catch(e) {
           break;
         }
@@ -125,8 +120,8 @@ export default function Home() {
         throw new Error("Không tìm thấy dữ liệu Test Case cho bài này.");
       }
 
-      let passedCount = 0;
-      const testResults = [];
+      const localRuns: { name: string, actual?: string, err?: string }[] = [];
+      const fingerprints: any[] = [];
 
       for (const t of testCases) {
         const pName = problem.replace("TEST_", "");
@@ -159,30 +154,45 @@ sys.stdout = io.StringIO()
             if (!actualOut) {
                 actualOut = await py.runPythonAsync("sys.stdout.getvalue().strip()");
             }
-            
-            // So sánh theo token (tách bởi bất kỳ khoảng trắng nào) — chuẩn competitive programming
-            // "4 2" và "4\n2" đều cho ra ["4","2"] → tính đúng
-            const normalize = (s: string) => (s || "").trim().replace(/\r/g, "").split(/\s+/).filter(t => t.length > 0).join(" ");
-            
-            if (normalize(actualOut) === normalize(t.out)) {
-                testResults.push({ name: t.name, status: "ĐÚNG", css: "bg-emerald-50 border-emerald-200 text-emerald-700" });
-                passedCount++;
-            } else {
-                testResults.push({ name: t.name, status: "SAI", css: "bg-rose-50 border-rose-200 text-rose-700", expected: t.out, actual: actualOut });
-            }
+            localRuns.push({ name: t.name, actual: actualOut });
+            fingerprints.push({ name: t.name, ...(await fingerprintOutput(actualOut)) });
         } catch (e: any) {
-            testResults.push({ name: t.name, status: "LỖI CHẠY CODE", css: "bg-amber-50 border-amber-200 text-amber-700", err: e.message });
+            localRuns.push({ name: t.name, err: e.message });
         }
       }
+
+      // Gửi dấu vân tay kết quả lên máy chủ chấm (so theo từ: "4 2" và "4\n2" như nhau)
+      const gradeRes = await fetch('/api/grade', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ kind: 'HSG', week, category, problem, code, results: fingerprints })
+      });
+      const grade = await gradeRes.json();
+      if (!gradeRes.ok || !grade.token) {
+          throw new Error(grade.error || "Máy chấm không phản hồi");
+      }
+
+      const verdictOf = new Map<string, any>((grade.tests || []).map((v: any) => [v.name, v]));
+      const testResults = localRuns.map(run => {
+          if (run.err !== undefined) {
+              return { name: run.name, status: "LỖI CHẠY CODE", css: "bg-amber-50 border-amber-200 text-amber-700", err: run.err };
+          }
+          const v = verdictOf.get(run.name);
+          if (v && v.status === "DUNG") {
+              return { name: run.name, status: "ĐÚNG", css: "bg-emerald-50 border-emerald-200 text-emerald-700" };
+          }
+          return { name: run.name, status: "SAI", css: "bg-rose-50 border-rose-200 text-rose-700", expected: v?.expected, actual: run.actual };
+      });
+      const passedCount = grade.passed;
 
       setResults(testResults);
 
       // Lưu lịch sử
       const history = JSON.parse(localStorage.getItem('submissionHistory') || '[]');
-      history.unshift({ date: new Date().toLocaleString('vi-VN'), week, problem, score: passedCount, maxScore: testCases.length, code });
+      history.unshift({ date: new Date().toLocaleString('vi-VN'), week, problem, score: passedCount, maxScore: grade.total, code });
       localStorage.setItem('submissionHistory', JSON.stringify(history.slice(0, 30)));
 
-      const firstError = testResults.find(r => r.err)?.err || (passedCount < testCases.length ? "Sai Logic / Không khớp Output" : "Hoàn hảo");
+      const firstError = testResults.find((r: any) => r.err)?.err || (passedCount < grade.total ? "Sai Logic / Không khớp Output" : "Hoàn hảo");
 
       await fetch('/api/sheets', {
           method: 'POST',
@@ -194,9 +204,11 @@ sys.stdout = io.StringIO()
               category,
               problem,
               score: passedCount,
-              maxScore: testCases.length,
+              maxScore: grade.total,
               errorMsg: firstError,
-              code: code
+              code: code,
+              gradedCode: code,
+              gradeToken: grade.token
           })
       });
 
@@ -434,6 +446,12 @@ sys.stdout = io.StringIO()
                                   <span className="opacity-60 font-semibold w-16 shrink-0">Output:</span>
                                   <span className="whitespace-pre-wrap font-mono font-bold flex-1 text-rose-700">{res.actual}</span>
                                 </div>
+                            </div>
+                        )}
+                        {!res.expected && res.status === "SAI" && (
+                            <div className="mt-3 text-xs bg-white/60 p-3 rounded-xl border border-black/5 flex-1 shadow-inner">
+                                <span className="opacity-60 font-semibold">Output của em: </span>
+                                <span className="whitespace-pre-wrap font-mono font-bold text-rose-700">{(res.actual || "(trống)").slice(0, 500)}</span>
                             </div>
                         )}
                         {res.err && <div className="mt-3 text-xs font-mono bg-white/60 p-3 rounded-xl border border-black/5 whitespace-pre-wrap flex-1 shadow-inner font-semibold">{res.err}</div>}

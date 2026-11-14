@@ -1,6 +1,13 @@
 import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
+import { verifyGrade, sha256Node } from '@/lib/server/gradeToken';
+
+/** Ô bắt đầu bằng = + - @ sẽ bị Google Sheets hiểu là công thức: thêm dấu ' để ghi nguyên văn. */
+function safeCell(v: any) {
+    if (typeof v !== 'string') return v;
+    return /^[=+\-@]/.test(v) ? "'" + v : v;
+}
 
 const OLD_SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID || "YOUR_SPREADSHEET_ID_HERE";
 const NEW_SPREADSHEET_ID = "1cVDdX91Se8hCbNms9MLwZu_1ed9f4s5c-hfRPt6Hs3M";
@@ -89,11 +96,6 @@ Quy định barem điểm vớt khuyến khích tư duy thuật toán (thang đi
 5. [0 ĐIỂM] NẾU CODE HOÀN TOÀN RỖNG, BỊ XÓA HẾT MÃ NGUỒN, LẠC ĐỀ HOÀN TOÀN HOẶC CHÉP LINH TINH: CHO 0 ĐIỂM.
 6. Viết lời nhận xét ngắn gọn (1 câu tiếng Việt nhận xét đúng nội dung) và KẾT QUẢ ĐIỂM SỐ CUỐI CÙNG LÀ MỘT CON SỐ DUY NHẤT Ở CUỐI CÂU.`;
 
-    // Debug API Key (chỉ lấy 5 ký tự đầu và cuối để kiểm chứng)
-    const keyPrefix = GEMINI_API_KEY.substring(0, 5);
-    const keySuffix = GEMINI_API_KEY.slice(-5);
-    const keyLength = GEMINI_API_KEY.length;
-
     const CANDIDATE_MODELS = [
         'gemini-3.8-flash',
         'gemini-3.5-flash',
@@ -160,7 +162,8 @@ Quy định barem điểm vớt khuyến khích tư duy thuật toán (thang đi
         }
     }
 
-    return { score: 0, reasoning: "Lỗi API (" + keyPrefix + "..." + keySuffix + ", len:" + keyLength + "): " + (lastError || "Tất cả model AI đều đang quá tải") };
+    console.warn("AI chấm vớt lỗi:", lastError);
+    return { score: 0, reasoning: "AI chấm vớt tạm thời không khả dụng, chờ giáo viên xem lại." };
 }
 
 export async function POST(req: Request) {
@@ -174,13 +177,27 @@ export async function POST(req: Request) {
             try { body = JSON.parse(rawText); } catch(e) { body = {}; }
         }
         let { studentName, mode, week, category, problem, score, maxScore, errorMsg, code } = body;
-        
-        let numScore = parseFloat(score) || 0;
-        const originalScore = numScore; 
-        let numMaxScore = parseFloat(maxScore) || 3.0;
+        code = typeof code === 'string' ? code.slice(0, 100_000) : '';
 
-        // Nhận diện bài thi KTGK (Thực hành Python 3 điểm)
-        const isKTGK = mode === 'DE_THI' || category === 'DE_THI' || numMaxScore <= 3.0;
+        // ĐIỂM CHỈ ĐƯỢC TIN KHI CÓ "CHỮ KÝ ĐIỂM" HỢP LỆ DO /api/grade CẤP.
+        // Điểm (score/maxScore) do trình duyệt tự gửi lên bị bỏ qua.
+        const grade = verifyGrade(body.gradeToken);
+        const gradedCode = typeof body.gradedCode === 'string' ? body.gradedCode : code;
+        const gradeValid = !!grade
+            && grade.ch === sha256Node(gradedCode)
+            && code.includes(gradedCode)
+            && String(grade.p).toUpperCase() === String(problem || '').toUpperCase();
+
+        // Nhận diện bài thi KTGK (Phòng thi, thang 3 điểm): theo chữ ký nếu có, nếu không thì theo mode của Phòng thi
+        const isKTGK = gradeValid ? grade!.k === 'KTGK' : mode === 'DE_THI';
+
+        let numScore = gradeValid ? (parseFloat(grade!.s) || 0) : 0;
+        const originalScore = numScore;
+        let numMaxScore = gradeValid ? grade!.m : (isKTGK ? 3.0 : (parseFloat(maxScore) || 10));
+        if (!gradeValid) {
+            errorMsg = (errorMsg || "") + " [Chưa có kết quả chấm tự động hợp lệ: điểm tự động = 0, chờ GV xem lại]";
+        }
+        score = numScore.toString();
 
         if (numScore < numMaxScore && numMaxScore > 0 && code) {
             try {
@@ -220,7 +237,7 @@ export async function POST(req: Request) {
         
         const timestamp = new Date().toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' });
         const loaiBai = category === "TL_TU_HOC" ? "Tự học" : "Đề thi";
-        const soTestSai = Math.max(0, numMaxScore - originalScore);
+        const soTestSai = gradeValid ? Math.max(0, grade!.t - grade!.pa) : Math.max(0, numMaxScore - originalScore);
         
         // Điểm thực hành KTGK luôn luôn lưu đúng thang 3 điểm (tối đa 3.0), TUYỆT ĐỐI không quy đổi ra thang 10
         let diem = numScore.toFixed(1);
@@ -260,7 +277,7 @@ export async function POST(req: Request) {
                         errorMsg || "",
                         diem,
                         code
-                    ]],
+                    ].map(safeCell)],
                 },
             });
         } catch (appendErr: any) {
@@ -283,7 +300,7 @@ export async function POST(req: Request) {
                         errorMsg || "",
                         diem,
                         code
-                    ]],
+                    ].map(safeCell)],
                 },
             });
         }

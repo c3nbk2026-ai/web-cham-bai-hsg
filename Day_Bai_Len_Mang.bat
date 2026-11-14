@@ -6,6 +6,8 @@ echo HỆ THỐNG TỰ ĐỘNG CẬP NHẬT BÀI TẬP LÊN TRANG WEB
 echo ==================================================
 echo.
 echo Dang quet thu muc public/data de tim cac Tuan hoc moi...
+echo Dang tach dap an (.OUT) ra khoi thu muc cong khai...
+node scripts\tach-dap-an.js
 git add .
 git commit -m "Giao vien cap nhat du lieu bai tap moi"
 echo.
