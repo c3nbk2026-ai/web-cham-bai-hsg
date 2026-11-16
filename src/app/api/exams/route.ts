@@ -50,6 +50,7 @@ export async function GET() {
                     'TUAN 12': ['FIBONUM', 'TAITRONG'],
                     'TUAN 13': ['LUONGMUA', 'THUNGDAU'],
                     'TUAN 14': ['LOAIHOA', 'GHEPCAP'],
+                    'TUAN 15': ['VEMAYMAN', 'BAUOC'],
                 };
                 const expectedOrder = problemOrderMap[week] || [];
                 problems = fs.readdirSync(testCasesDir)
