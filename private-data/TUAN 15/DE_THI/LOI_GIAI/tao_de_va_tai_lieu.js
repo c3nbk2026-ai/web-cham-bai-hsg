@@ -32,7 +32,7 @@ function makeHelpers(font, size) {
   return { r, p, table };
 }
 const numbering = { config: [{ reference: 'dots', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 270 } } } }] }] };
-const page = { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } };
+const page = { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1134, right: 1134 } };
 
 
 
@@ -165,6 +165,7 @@ function tuHoc() {
     h2('Bài khởi động 1: SÀNG NGUYÊN TỐ (SANGNT)'),
     p('Đề bài: Cho số nguyên dương N (N ≤ 10^6). Dòng 1 in số lượng số nguyên tố không vượt quá N; dòng 2 in số nguyên tố lớn nhất không vượt quá N (in −1 nếu không có).', { align: J }),
     p('Ví dụ: vào "30" → ra "10" và "29". Vào "1" → ra "0" và "-1".', { align: J }),
+    ...code(['import sys', "sys.stdin = open('SANGNT.INP', 'r')", "sys.stdout = open('SANGNT.OUT', 'w')   # đọc/ghi tệp như khi thi", 'n = int(input())', '# TODO: sàng như mục 2, in số lượng và số nguyên tố lớn nhất']),
     h2('Bài khởi động 2: SỐ ƯỚC NGUYÊN TỐ (UOCNT)'),
     p('Đề bài: Cho Q số nguyên dương x (Q ≤ 10^5, x ≤ 2 × 10^5). Với mỗi số, in số lượng ước nguyên tố KHÁC NHAU của nó, các kết quả trên cùng một dòng.', { align: J }),
     p('Ví dụ: vào "5" và "12 7 1 30 64" → ra "2 1 0 3 1" (12 = 2² × 3; 30 = 2 × 3 × 5; 64 = 2⁶).', { align: J }),

@@ -157,7 +157,7 @@ function tuHoc() {
     h2('Bài khởi động 1: ĐẾM SỐ LẦN XUẤT HIỆN (DEMSO)'),
     p('Đề bài: Cho N (N ≤ 10^5) và dãy N số nguyên (|A[i]| ≤ 10^9). Với mỗi giá trị khác nhau, in một dòng gồm giá trị đó và số lần xuất hiện, theo thứ tự giá trị TĂNG DẦN.', { align: J }),
     p('Ví dụ: vào "7" và "4 2 4 1 2 4 9" → ra 4 dòng: "1 1", "2 2", "4 3", "9 1".', { align: J }),
-    ...code(['import sys', 'data = sys.stdin.read().split()', 'n = int(data[0])', 'cnt = {}', 'for x in data[1:n + 1]:', '    x = int(x)', '    # TODO: tăng cnt[x] lên 1', 'for v in sorted(cnt):', "    print(v, cnt[v])"]),
+    ...code(['import sys', "sys.stdin = open('DEMSO.INP', 'r')", "sys.stdout = open('DEMSO.OUT', 'w')   # đọc/ghi tệp như khi thi", 'data = sys.stdin.read().split()', 'n = int(data[0])', 'cnt = {}', 'for x in data[1:n + 1]:', '    x = int(x)', '    # TODO: tăng cnt[x] lên 1', 'for v in sorted(cnt):', "    print(v, cnt[v])"]),
     h2('Bài khởi động 2: SỐ CHUNG CỦA HAI DÃY (CHUNGSO)'),
     p('Đề bài: Cho dãy A gồm N số và dãy B gồm M số (N, M ≤ 10^5). Đếm số giá trị KHÁC NHAU có mặt ở cả hai dãy.', { align: J }),
     p('Ví dụ: vào "5 4", "1 2 2 3 5", "2 3 3 4" → ra "2" (các giá trị chung là 2 và 3).', { align: J }),

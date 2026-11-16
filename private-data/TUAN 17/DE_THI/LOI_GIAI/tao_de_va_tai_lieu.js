@@ -91,7 +91,7 @@ const GUIDES = [
   ['b', 'Xây bảng cộng dồn S và tính tổng hình chữ nhật con trong O(1).'],
   ['ch', 'CHƯƠNG II', 'LÝ THUYẾT NỀN TẢNG & MÔ HÌNH TRỰC QUAN'],
   ['h2', '1. Đọc bảng và duyệt 4 ô kề'],
-  ['code', ['import sys', 'data = sys.stdin.read().split()', 'm, n = int(data[0]), int(data[1])', 'a = [[int(data[2 + i * n + j]) for j in range(n)] for i in range(m)]', 'dx = [-1, 1, 0, 0]; dy = [0, 0, -1, 1]   # trên, dưới, trái, phải', 'for i in range(m):', '    for j in range(n):', '        for k in range(4):', '            x, y = i + dx[k], j + dy[k]', '            if 0 <= x < m and 0 <= y < n:', '                pass  # a[x][y] là một ô kề của a[i][j]']],
+  ['code', ['import sys', "sys.stdin = open('TONGHANG.INP', 'r')", "sys.stdout = open('TONGHANG.OUT', 'w')   # đọc/ghi tệp như khi thi", 'data = sys.stdin.read().split()', 'm, n = int(data[0]), int(data[1])', 'a = [[int(data[2 + i * n + j]) for j in range(n)] for i in range(m)]', 'dx = [-1, 1, 0, 0]; dy = [0, 0, -1, 1]   # trên, dưới, trái, phải', 'for i in range(m):', '    for j in range(n):', '        for k in range(4):', '            x, y = i + dx[k], j + dy[k]', '            if 0 <= x < m and 0 <= y < n:', '                pass  # a[x][y] là một ô kề của a[i][j]']],
   ['p', 'Đọc cả tệp bằng sys.stdin.read().split() nhanh hơn nhiều so với gọi input() 500 lần. Điều kiện 0 ≤ x < m giúp các ô ở mép bảng không bị truy cập ra ngoài.'],
   ['h2', '2. Bảng cộng dồn hai chiều'],
   ['p', 'S[i][j] = tổng các ô từ (1, 1) đến (i, j). Thêm hàng 0 và cột 0 toàn số 0 để khỏi xét trường hợp mép:'],

@@ -56,6 +56,21 @@ self.onmessage = async (e) => {
   }
   const ms = performance.now() - t0;
 
+  // Bài làm đọc/ghi tệp như khi thi (sys.stdout = open('X.OUT', 'w')) thường không đóng tệp:
+  // phải đẩy bộ đệm ra tệp thì mới đọc được kết quả.
+  try {
+    await py.runPythonAsync([
+      'import sys, io, gc',
+      'for _f in (sys.stdout, sys.stderr):',
+      '    if not isinstance(_f, io.StringIO):',
+      '        try:',
+      '            _f.flush()',
+      '        except Exception:',
+      '            pass',
+      'gc.collect()',
+    ].join('\n'));
+  } catch (e) {}
+
   let out = readFileIfAny(py, [pName + '.OUT', pName + '.out']);
   if (!out) {
     try { out = py.runPython('sys.stdout.getvalue()'); } catch (e) { out = ''; }

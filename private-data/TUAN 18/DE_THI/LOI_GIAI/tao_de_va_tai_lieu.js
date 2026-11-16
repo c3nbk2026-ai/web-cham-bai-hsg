@@ -32,7 +32,7 @@ function makeHelpers(font, size) {
   return { r, p, table };
 }
 const numbering = { config: [{ reference: 'dots', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 270 } } } }] }] };
-const page = { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } };
+const page = { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1134, right: 1134 } };
 
 // Bộ dựng tài liệu tự học: mỗi tuần mô tả bằng một mảng khối nội dung.
 const LV = {
@@ -82,7 +82,7 @@ function buildGuide(lv, week, title, blocks) {
 const GUIDES = [
 { lv: 'NC', week: 18, title: 'XỬ LÝ XÂU KÝ TỰ – TÁCH TỪ, ĐẾM TẦN SUẤT & ĐẾM CẶP MỘT LẦN DUYỆT', blocks: [
   ['intro'],
-  ['p', 'Bài xâu trong đề HSG thường có ba việc: tách xâu thành các từ (bỏ dấu câu, khoảng trắng thừa), thống kê các từ và đếm nhanh trên xâu rất dài. Buổi này tổng hợp cả ba kỹ năng đó.'],
+  ['p', 'Bài xâu trong đề HSG thường yêu cầu tách từ, thống kê từ và đếm nhanh trên xâu rất dài. Buổi này tổng hợp các kỹ năng đó.'],
   ['p', '**Yêu cầu:** Đọc kỹ lý thuyết, tự viết code 2 bài khởi động và kiểm thử trên web tới khi đạt 100% test. Sau đó làm Đề luyện tập số 18 ở mục Luyện Đề.'],
   ['ch', 'CHƯƠNG I', 'MỤC TIÊU BÀI HỌC'],
   ['b', 'Tách từ khi dấu câu và khoảng trắng lẫn lộn; đếm tần suất từ bằng dict.'],
@@ -93,12 +93,11 @@ const GUIDES = [
     ['Câu lệnh', 'Ý nghĩa'],
     ["s.split()", 'Tách theo khoảng trắng, tự bỏ khoảng trắng thừa ở đầu, cuối, giữa'],
     ["' '.join(ds)", 'Ghép danh sách từ, cách nhau đúng một dấu cách'],
-    ["s.lower(), s.upper()", 'Đổi toàn bộ sang chữ thường / chữ hoa'],
     ["'A' <= c <= 'Z'", 'c là chữ cái in hoa (chỉ bảng chữ cái tiếng Anh)'],
   ]],
   ['h2', '2. Tách từ khi có dấu câu'],
   ['p', 'Duyệt từng ký tự: chữ cái/chữ số thì ghép vào từ đang đọc, gặp ký tự khác thì kết thúc từ. Thêm một dấu cách vào cuối xâu để không bỏ sót từ cuối cùng.'],
-  ['code', ['s = input()', 'tu = []; cur = []', "for c in s + ' ':", '    if c.isascii() and c.isalnum():', '        cur.append(c.lower())', '    elif cur:', "        tu.append(''.join(cur)); cur = []", 'dem = {}', 'for w in tu:', '    dem[w] = dem.get(w, 0) + 1', 'best = min(dem, key=lambda w: (-dem[w], w))   # nhiều nhất, hòa thì nhỏ nhất']],
+  ['code', ['import sys', "sys.stdin = open('TUKHOA.INP', 'r')", "sys.stdout = open('TUKHOA.OUT', 'w')   # đọc/ghi tệp như khi thi", 's = input()', 'tu = []; cur = []', "for c in s + ' ':", '    if c.isascii() and c.isalnum():', '        cur.append(c.lower())', '    elif cur:', "        tu.append(''.join(cur)); cur = []", 'dem = {}', 'for w in tu:', '    dem[w] = dem.get(w, 0) + 1', 'best = min(dem, key=lambda w: (-dem[w], w))   # nhiều nhất, hòa thì nhỏ nhất']],
   ['p', 'Khóa (−dem[w], w): số lần lớn hơn đứng trước, cùng số lần thì từ nhỏ hơn đứng trước. Không dùng tu.count(w) cho từng từ vì rất chậm.'],
   ['h2', '3. Đếm cặp (i < j) bằng một lần duyệt'],
   ['p', 'Đếm cặp X đứng trước Y: duyệt từ trái sang, giữ biến cx = số chữ X đã gặp. Gặp chữ Y thì mọi chữ X phía trước đều ghép được với nó, nên cộng cx vào đáp án. Phải cộng TRƯỚC rồi mới tăng cx để đúng cả khi X trùng Y.'],
@@ -106,8 +105,8 @@ const GUIDES = [
     ['i', 'S[i]', 'cx (số D đã gặp)', 'Đáp án (X = D, Y = V)'],
     ['1', 'D', '1', '0'], ['2', 'V', '1', '0 + 1 = 1'], ['3, 4', 'D, D', '3', '1'], ['5', 'V', '3', '1 + 3 = 4'], ['6', 'V', '3', '4 + 3 = 7'],
   ]],
-  ['code', ['s = input().strip()', 'x, y = input().split()', 'cx = 0; dap_an = 0', 'for c in s:', '    if c == y:', '        dap_an += cx', '    if c == x:', '        cx += 1', 'print(dap_an)']],
-  ['p', 'Hai vòng for lồng nhau cần khoảng 5 × 10^11 bước với xâu dài 10^6, còn cách trên chỉ cần 10^6 bước. **Liên hệ đề số 18:** Câu 1 (TUKHOA) = tách từ + dict; Câu 2 (DENLONG) = đếm cặp một lần duyệt.'],
+  ['code', ['import sys', "sys.stdin = open('DENLONG.INP', 'r')", "sys.stdout = open('DENLONG.OUT', 'w')   # đọc/ghi tệp như khi thi", 's = input().strip()', 'x, y = input().split()', 'cx = 0; dap_an = 0', 'for c in s:', '    if c == y:', '        dap_an += cx', '    if c == x:', '        cx += 1', 'print(dap_an)']],
+  ['p', 'Chỉ cần 10^6 bước thay vì khoảng 5 × 10^11 bước của hai vòng for. **Liên hệ đề số 18:** Câu 1 = tách từ + dict; Câu 2 = đếm cặp một lần duyệt.'],
   ['ch', 'CHƯƠNG III', 'KHUNG CHƯƠNG TRÌNH & 2 BÀI KHỞI ĐỘNG'],
   ['h2', 'Bài khởi động 1: PHÂN LOẠI KÝ TỰ (DEMKYTU)'],
   ['p', 'Đề bài: Cho một dòng xâu S (độ dài ≤ 10^5). In trên một dòng 5 số: số chữ in hoa, số chữ thường, số chữ số, số dấu cách và số ký tự còn lại.'],

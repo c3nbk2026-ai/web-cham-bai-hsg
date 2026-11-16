@@ -167,7 +167,7 @@ function tuHoc() {
     p('Đề bài: Cho dãy N số nguyên dương đã sắp xếp KHÔNG GIẢM (có thể trùng nhau) và Q câu hỏi (N, Q ≤ 10^5). Dữ liệu vào giống bài TIMX. Với mỗi x, in trên một dòng số lần x xuất hiện trong dãy.', { align: J }),
     p('Ví dụ: vào "8 4", "1 3 3 3 5 7 7 9", "3 7 4 9" → ra 3, 2, 0, 1.', { align: J }),
     p('Gợi ý: số lần xuất hiện = (vị trí đầu tiên có a[k] > x) − (vị trí đầu tiên có a[k] ≥ x).', { align: J }),
-    ...code(['import sys', 'data = sys.stdin.read().split()', 'n, q = int(data[0]), int(data[1])', 'a = [int(v) for v in data[2:2 + n]]', 'kq = []', 'for j in range(q):', '    x = int(data[2 + n + j])', '    # TODO: tìm kiếm nhị phân, thêm kết quả vào kq', 'print("\\n".join(kq))']),
+    ...code(['import sys', "sys.stdin = open('DEMX.INP', 'r')", "sys.stdout = open('DEMX.OUT', 'w')   # đọc/ghi tệp như khi thi", 'data = sys.stdin.read().split()', 'n, q = int(data[0]), int(data[1])', 'a = [int(v) for v in data[2:2 + n]]', 'kq = []', 'for j in range(q):', '    x = int(data[2 + n + j])', '    # TODO: tìm kiếm nhị phân, thêm kết quả vào kq', 'print("\\n".join(kq))']),
 
     ...ch('CHƯƠNG IV', 'HỆ THỐNG KIỂM THỬ TỰ ĐỘNG'),
     p('Vào trang Chấm Code → chọn TUAN 16 → Loại bài "Tự học" → chọn TEST_TIMX hoặc TEST_DEMX → dán code → Chạy Code. Đạt 100% thì sang mục Luyện Đề làm Đề số 16. Mỗi bài khởi động có 10 test:', { align: J }),

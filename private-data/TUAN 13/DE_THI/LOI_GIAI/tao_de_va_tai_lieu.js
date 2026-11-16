@@ -32,7 +32,7 @@ function makeHelpers(font, size) {
   return { r, p, table };
 }
 const numbering = { config: [{ reference: 'dots', levels: [{ level: 0, format: LevelFormat.BULLET, text: '•', alignment: AlignmentType.LEFT, style: { paragraph: { indent: { left: 540, hanging: 270 } } } }] }] };
-const page = { size: { width: 11906, height: 16838 }, margin: { top: 1134, bottom: 1134, left: 1134, right: 1134 } };
+const page = { size: { width: 11906, height: 16838 }, margin: { top: 850, bottom: 850, left: 1134, right: 1134 } };
 
 // ======================= ĐỀ THI SỐ 13 =======================
 function deThi() {
@@ -162,11 +162,11 @@ function tuHoc() {
 
     ...ch('CHƯƠNG III', 'KHUNG CHƯƠNG TRÌNH & 2 BÀI KHỞI ĐỘNG'),
     h2('Cách đọc dữ liệu nhanh (dùng cho mọi bài)'),
-    ...code(['import sys', 'data = sys.stdin.read().split()   # đọc toàn bộ dữ liệu một lần', 'n = int(data[0])', '# ... xử lý ...', 'print(...)']),
+    ...code(['import sys', "sys.stdin = open('CONGDON.INP', 'r')", "sys.stdout = open('CONGDON.OUT', 'w')   # đọc/ghi tệp như khi thi", 'data = sys.stdin.read().split()   # đọc toàn bộ dữ liệu một lần', 'n = int(data[0])', '# ... xử lý ...', 'print(...)']),
     h2('Bài khởi động 1: DÃY CỘNG DỒN (CONGDON)'),
     p('Đề bài: Cho N và dãy N số nguyên A[1..N] (|A[i]| ≤ 10^9, N ≤ 10^5). In ra N số S[1], S[2], ..., S[N] trên một dòng, cách nhau một khoảng trắng.', { align: J }),
     p('Ví dụ: vào "5" và "3 1 4 1 5" → ra "3 4 8 9 14".', { align: J }),
-    ...code(['import sys', 'data = sys.stdin.read().split()', 'n = int(data[0])', 's = 0', 'ket_qua = []', 'for i in range(1, n + 1):', '    # TODO: cộng thêm phần tử thứ i vào s rồi lưu s vào ket_qua', '    pass', "print(' '.join(map(str, ket_qua)))"]),
+    ...code(['import sys', "sys.stdin = open('CONGDON.INP', 'r')", "sys.stdout = open('CONGDON.OUT', 'w')   # đọc/ghi tệp như khi thi", 'data = sys.stdin.read().split()', 'n = int(data[0])', 's = 0', 'ket_qua = []', 'for i in range(1, n + 1):', '    # TODO: cộng thêm phần tử thứ i vào s rồi lưu s vào ket_qua', '    pass', "print(' '.join(map(str, ket_qua)))"]),
     h2('Bài khởi động 2: TỔNG K NGÀY LIÊN TIẾP LỚN NHẤT (TONGKMAX)'),
     p('Đề bài: Cho N, K (1 ≤ K ≤ N ≤ 10^5) và dãy A[1..N] (có thể có số âm). Tìm tổng lớn nhất của K phần tử đứng liên tiếp.', { align: J }),
     p('Ví dụ: vào "7 3" và "2 -1 4 5 -3 6 1" → ra "8" (đoạn −1, 4, 5 hoặc đoạn 5, −3, 6).', { align: J }),
