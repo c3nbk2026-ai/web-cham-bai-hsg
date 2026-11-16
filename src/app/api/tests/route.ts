@@ -90,6 +90,7 @@ export async function GET() {
                     'TUAN 10': ['TEST_ARMSTRONG', 'TEST_GIATRI'],
                     'TUAN 11': ['TEST_RLECOMP', 'TEST_XECHO'],
                     'TUAN 12': ['TEST_FIBONUM', 'TEST_TAITRONG'],
+                    'TUAN 13': ['TEST_LUONGMUA', 'TEST_THUNGDAU'],
                 };
                 const expectedOrder = problemOrder[folder] || [];
                 const sortedDeThi = [...deThiDirs].sort((a, b) => {
