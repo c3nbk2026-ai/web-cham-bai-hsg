@@ -1,0 +1,17 @@
+{
+  "_ghi_chu": "Cấu hình chấm chuẩn HSG (chế độ Nâng Cao và Luyện Đề). Lấy từ đề PDF; cô có thể sửa tay.",
+  "diemToiDa": 10,
+  "gioiHanThoiGianGiay": 3,
+  "subtasks": [
+    {
+      "ten": "Subtask 1",
+      "tests": "1-12",
+      "diem": 6.0
+    },
+    {
+      "ten": "Subtask 2",
+      "tests": "13-20",
+      "diem": 4.0
+    }
+  ]
+}
