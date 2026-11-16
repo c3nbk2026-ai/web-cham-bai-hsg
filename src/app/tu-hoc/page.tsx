@@ -137,7 +137,8 @@ export default function TuHocPage() {
     let totalDocs = 0;
     let completedCount = 0;
 
-    Object.keys(docsTree).sort().forEach(week => {
+    const weekNum = (w: string) => parseInt(w.replace(/[^0-9]/g, '')) || 0;
+    Object.keys(docsTree).sort((a, b) => weekNum(a) - weekNum(b)).forEach(week => {
         const filtered = docsTree[week].filter((doc: any) => !doc.mode || doc.mode === 'ALL' || doc.mode === mode);
         if (filtered.length > 0) {
             filteredDocsTree[week] = filtered;

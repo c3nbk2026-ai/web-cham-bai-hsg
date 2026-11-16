@@ -40,7 +40,8 @@ export async function GET() {
     try {
         if (!fs.existsSync(dataDir)) return NextResponse.json({});
         
-        const weeks = fs.readdirSync(dataDir).filter(f => f.startsWith('TUAN'));
+        const weeks = fs.readdirSync(dataDir).filter(f => f.startsWith('TUAN'))
+            .sort((a, b) => (parseInt(a.replace(/[^0-9]/g, '')) || 0) - (parseInt(b.replace(/[^0-9]/g, '')) || 0));
         for (const week of weeks) {
             docsTree[week] = [];
             
