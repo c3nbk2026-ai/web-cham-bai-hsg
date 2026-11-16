@@ -394,7 +394,7 @@ export default function Home() {
                 <div>
                   <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tuần</label>
                   <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-slate-700 font-semibold cursor-pointer shadow-sm" value={week} onChange={(e) => setWeek(e.target.value)}>
-                    {Object.keys(structure).filter(w => w !== 'DE_KTGK').map((w) => (
+                    {Object.keys(structure).filter(w => w !== 'DE_KTGK').sort((a, b) => (parseInt(a.replace(/[^0-9]/g, '')) || 0) - (parseInt(b.replace(/[^0-9]/g, '')) || 0)).map((w) => (
                       <option key={w} value={w}>{w}</option>
                     ))}
                   </select>
