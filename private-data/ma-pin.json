@@ -1,0 +1,54 @@
+{
+  "hocSinh": {
+    "Ninh Đức Mạnh": {
+      "salt": "ce90588dc01c93dbf01a0dc07f14db59",
+      "hash": "dc0176d77047e6e8568a1c352597693ef4674e75289fff40ed4338b5981bec0f",
+      "taoLuc": "2026-11-16T02:51:55.235Z"
+    },
+    "Lưu Nhật Khang": {
+      "salt": "8b5b978c4e2915d62ccd7e8c8b3abec2",
+      "hash": "bfd6fa15a6d2e50bdfc7e47b59878332fee69434c308989a63e180dfd8f00df5",
+      "taoLuc": "2026-11-16T02:51:55.282Z"
+    },
+    "Đinh Trần Minh Nhật": {
+      "salt": "640946aa1eca38cb04a42b0d2a0af14b",
+      "hash": "276acd8b710666fb988af73d28d8544eb454a0ee292c6c2476cfa124da78e0a6",
+      "taoLuc": "2026-11-16T02:51:55.319Z"
+    },
+    "Nguyễn Thị Quyên": {
+      "salt": "afe1b586cba73c81c0da17c2b5438c99",
+      "hash": "23108639eb5b05a53f956ac1f3a3e8bb4b3d8d214f2e86aa4de81753bb4e710c",
+      "taoLuc": "2026-11-16T02:51:55.357Z"
+    },
+    "Đoàn Việt Hoàng": {
+      "salt": "415f368b332153f81dfe98b13562e78d",
+      "hash": "1a8034258008c1e3495432c9494c2857fae31313489ccc93195457e76d44be58",
+      "taoLuc": "2026-11-16T02:51:55.393Z"
+    },
+    "Hồ Nhã Thục Quyên": {
+      "salt": "18d3c049da4d8de852cf68a20d9937f0",
+      "hash": "da3a2b756c6594975878e98380909ea994aab363887164b09adae3065b785b2a",
+      "taoLuc": "2026-11-16T02:51:55.430Z"
+    },
+    "Hồ Nguyễn Đức Anh": {
+      "salt": "25446ae089a2e88143b67db8fba78acd",
+      "hash": "cc9f854863ab21eba3fd1063556ae7f4932b2f6a73aaa71576501edd2ef1daa7",
+      "taoLuc": "2026-11-16T02:51:55.467Z"
+    },
+    "Ngô Nguyễn Minh Hoàng": {
+      "salt": "c67d6b8adf4a81a767d9a21eb93b8c6a",
+      "hash": "a4f90c06ac082b9fe5f311246953d51cbefd98b97bdb6baa064d41fef95f0231",
+      "taoLuc": "2026-11-16T02:51:55.504Z"
+    },
+    "Pando": {
+      "salt": "0169e90283a385ab4579b143e78594a3",
+      "hash": "6c94b273df4c5e5c1004c65288cd83691b5de6168eea3ab640e9d1b82379fbf3",
+      "taoLuc": "2026-11-16T02:51:55.540Z"
+    },
+    "Milo": {
+      "salt": "5af1fb50e458729a46c6eb19fdc28483",
+      "hash": "ab9a3dcf17b9c2ea2e48f288043bcd017509d941c92167d7c49148fdb0e9334f",
+      "taoLuc": "2026-11-16T02:51:55.577Z"
+    }
+  }
+}

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { google } from 'googleapis';
 import path from 'path';
 import { verifyGrade, sha256Node } from '@/lib/server/gradeToken';
+import { readSession } from '@/lib/server/session';
 
 /** Ô bắt đầu bằng = + - @ sẽ bị Google Sheets hiểu là công thức: thêm dấu ' để ghi nguyên văn. */
 function safeCell(v: any) {
@@ -164,6 +165,16 @@ export async function POST(req: Request) {
 
         // Nhận diện bài thi KTGK (Phòng thi, thang 3 điểm): theo chữ ký nếu có, nếu không thì theo mode của Phòng thi
         const isKTGK = gradeValid ? grade!.k === 'KTGK' : mode === 'DE_THI';
+
+        // Bài luyện tập HSG: tên học sinh lấy từ phiên đăng nhập bằng mã PIN, không tin tên do trình duyệt gửi.
+        // (Phòng thi KTGK của học sinh lớp học không dùng PIN.)
+        if (!isKTGK) {
+            const sessionName = readSession(req);
+            if (!sessionName) {
+                return NextResponse.json({ error: "Em cần đăng nhập bằng mã PIN trước khi nộp bài." }, { status: 401 });
+            }
+            studentName = sessionName;
+        }
 
         let numScore = gradeValid ? (parseFloat(grade!.s) || 0) : 0;
         const originalScore = numScore;

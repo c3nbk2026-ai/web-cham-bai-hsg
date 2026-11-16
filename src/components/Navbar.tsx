@@ -11,11 +11,29 @@ export default function Navbar() {
     const [showHistory, setShowHistory] = useState(false);
     const [history, setHistory] = useState<any[]>([]);
 
+    const [historyNote, setHistoryNote] = useState("");
+
     useEffect(() => {
-        if (showHistory) {
-            const h = JSON.parse(localStorage.getItem('submissionHistory') || '[]');
-            setHistory(h);
-        }
+        if (!showHistory) return;
+        // Ưu tiên lịch sử trên máy chủ (theo học sinh đã đăng nhập, xem được ở mọi máy)
+        setHistoryNote("Đang tải lịch sử...");
+        fetch('/api/history', { cache: 'no-store' })
+            .then(async r => {
+                const d = await r.json().catch(() => ({}));
+                if (r.ok && Array.isArray(d.items)) {
+                    setHistory(d.items);
+                    setHistoryNote(d.items.length ? "" : "Em chưa nộp bài nào.");
+                } else {
+                    // Chưa đăng nhập / lỗi: hiện lịch sử lưu trên máy này
+                    const h = JSON.parse(localStorage.getItem('submissionHistory') || '[]');
+                    setHistory(h);
+                    setHistoryNote((d.error || "Không tải được lịch sử từ máy chủ.") + " Dưới đây là lịch sử lưu trên máy này.");
+                }
+            })
+            .catch(() => {
+                setHistory(JSON.parse(localStorage.getItem('submissionHistory') || '[]'));
+                setHistoryNote("Mất kết nối. Dưới đây là lịch sử lưu trên máy này.");
+            });
     }, [showHistory]);
 
     if (pathname === '/thi') return null;
@@ -115,8 +133,9 @@ export default function Navbar() {
                           </button>
                       </div>
                       <div className="p-6 overflow-y-auto flex-1">
+                          {historyNote && <p className="text-sm text-slate-500 mb-4">{historyNote}</p>}
                           {history.length === 0 ? (
-                              <p className="text-center text-slate-500 italic py-10">Bạn chưa nộp bài nào trên trình duyệt này.</p>
+                              <p className="text-center text-slate-500 italic py-10">Chưa có bài nộp nào.</p>
                           ) : (
                               <div className="space-y-4">
                                   {history.map((item, idx) => (
@@ -127,7 +146,7 @@ export default function Navbar() {
                                                   {item.score} / {item.maxScore} điểm
                                               </div>
                                           </div>
-                                          <div className="text-xs text-slate-500 mb-2">{item.date} • {item.week}</div>
+                                          <div className="text-xs text-slate-500 mb-2">{item.date} • {item.week}{item.loaiBai ? " • " + item.loaiBai : ""}{item.nhom ? " • " + item.nhom : ""}</div>
                                           <pre className="bg-slate-900 text-slate-300 p-3 rounded-lg text-xs overflow-x-auto">
                                               {item.code}
                                           </pre>

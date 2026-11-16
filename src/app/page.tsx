@@ -24,6 +24,49 @@ export default function Home() {
     return runnerRef.current;
   };
   const [progress, setProgress] = useState("");
+  // Đăng nhập bằng mã PIN: studentName = tên đã đăng nhập ("" = chưa đăng nhập)
+  const [loginName, setLoginName] = useState("");
+  const [pinInput, setPinInput] = useState("");
+  const [loginError, setLoginError] = useState("");
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/login", { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => { if (d.name) setStudentName(d.name); })
+      .catch(() => {});
+  }, []);
+
+  const handleLogin = async () => {
+    if (!loginName) return setLoginError("Em chọn tên của mình.");
+    if (!/^\d{6}$/.test(pinInput.trim())) return setLoginError("Mã PIN gồm 6 chữ số.");
+    setIsLoggingIn(true);
+    setLoginError("");
+    try {
+      const r = await fetch("/api/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: loginName, pin: pinInput.trim() })
+      });
+      const d = await r.json();
+      if (r.ok && d.name) {
+        setStudentName(d.name);
+        setPinInput("");
+      } else {
+        setLoginError(d.error || "Đăng nhập không thành công.");
+      }
+    } catch (e) {
+      setLoginError("Lỗi kết nối, em thử lại nhé.");
+    }
+    setIsLoggingIn(false);
+  };
+
+  const handleLogout = async () => {
+    try { await fetch("/api/login", { method: "DELETE" }); } catch (e) {}
+    setStudentName("");
+    setResults([]);
+    setSubtaskSummary(null);
+  };
   const [subtaskSummary, setSubtaskSummary] = useState<any>(null);
   const [timeLimitMs, setTimeLimitMs] = useState(2000);
   // Chấm chuẩn HSG (giới hạn thời gian, TLE, điểm theo subtask) chỉ áp dụng cho Nâng Cao và Luyện Đề
@@ -80,7 +123,7 @@ export default function Home() {
       .then(res => res.json())
       .then(data => {
           setStudents(data);
-          if (data.length > 0) setStudentName(data[0]);
+          if (data.length > 0) setLoginName(data[0]);
       })
       .catch(() => console.log("Không tìm thấy file danh sách học sinh"));
   }, []);
@@ -98,6 +141,7 @@ export default function Home() {
   };
 
   const submitCode = async () => {
+    if (!studentName) return alert("Em đăng nhập bằng mã PIN trước khi nộp bài nhé.");
     if (!problem) return alert("Vui lòng chọn bài!");
     setIsLoading(true);
     setResults([]);
@@ -214,7 +258,16 @@ export default function Home() {
 
       setResults(testResults);
       if (grade.subtasks) {
-          setSubtaskSummary({ subtasks: grade.subtasks, score: grade.score, maxScore: grade.maxScore });
+          // Đếm số test quá thời gian trong từng subtask để học sinh hiểu vì sao mất điểm
+          const tleOf: number[] = grade.subtasks.map(() => 0);
+          testResults.forEach((r: any) => {
+              const i = subtaskOf.get(r.name);
+              if (r.status === "QUÁ THỜI GIAN" && i !== undefined && i < tleOf.length) tleOf[i]++;
+          });
+          setSubtaskSummary({
+              subtasks: grade.subtasks.map((st: any, i: number) => ({ ...st, tle: tleOf[i] })),
+              score: grade.score, maxScore: grade.maxScore
+          });
       }
 
       // Lưu lịch sử
@@ -317,12 +370,23 @@ export default function Home() {
             <div className="space-y-5">
               <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">HỌC SINH</label>
-                    {students.length > 0 ? (
-                      <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)}>
-                        {students.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
+                    {studentName ? (
+                      <div className="flex items-center gap-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl shadow-sm">
+                        <span className="flex-1 text-emerald-900 font-bold">✅ {studentName}</span>
+                        <button onClick={handleLogout} className="text-xs font-bold text-slate-500 hover:text-rose-600 px-2 py-1 rounded-lg hover:bg-white">Đăng xuất</button>
+                      </div>
                     ) : (
-                      <input type="text" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-semibold shadow-sm" value={studentName} onChange={e => setStudentName(e.target.value)} placeholder="Nhập tên..." />
+                      <div className="space-y-2">
+                        <select className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 appearance-none text-indigo-900 font-bold cursor-pointer shadow-sm" value={loginName} onChange={e => setLoginName(e.target.value)}>
+                          {students.map(s => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <div className="flex gap-2">
+                          <input type="password" inputMode="numeric" maxLength={6} autoComplete="off" className="flex-1 min-w-0 p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/50 focus:border-indigo-500 text-indigo-900 font-bold tracking-[0.4em] shadow-sm" value={pinInput} onChange={e => setPinInput(e.target.value.replace(/\D/g, ''))} onKeyDown={e => { if (e.key === 'Enter') handleLogin(); }} placeholder="Mã PIN" />
+                          <button onClick={handleLogin} disabled={isLoggingIn} className="px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold shadow disabled:opacity-50">{isLoggingIn ? "..." : "Đăng nhập"}</button>
+                        </div>
+                        {loginError && <p className="text-xs font-semibold text-rose-600">{loginError}</p>}
+                        <p className="text-[11px] text-slate-400">Mã PIN 6 số do giáo viên phát. Đăng nhập một lần, máy nhớ 30 ngày.</p>
+                      </div>
                     )}
                   </div>
 
@@ -478,9 +542,14 @@ export default function Home() {
                   <div key={st.ten} className={"p-3 rounded-2xl border flex flex-col justify-center " + (st.dung === st.tong ? "bg-emerald-50 border-emerald-200 text-emerald-800" : st.dung === 0 ? "bg-rose-50 border-rose-200 text-rose-800" : "bg-amber-50 border-amber-200 text-amber-800")}>
                     <span className="text-xs font-bold">{st.ten}</span>
                     <span className="text-lg font-black">{st.dat} / {st.diem} điểm</span>
-                    <span className="text-xs font-semibold opacity-80">{st.dung}/{st.tong} test đúng</span>
+                    <span className="text-xs font-semibold opacity-80">{st.dung}/{st.tong} test đúng{st.tle > 0 ? ` · ${st.tle} test quá thời gian` : ""}</span>
                   </div>
                 ))}
+                {subtaskSummary.subtasks.some((st: any) => st.tle > 0) && (
+                  <div className="sm:col-span-3 text-xs font-semibold text-orange-800 bg-orange-50 border border-orange-200 rounded-xl px-3 py-2">
+                    ⏱️ Code có test chạy quá {(timeLimitMs / 1000).toLocaleString('vi-VN')} giây: kết quả có thể đúng với dữ liệu nhỏ nhưng thuật toán chưa đủ nhanh với dữ liệu lớn. Em thử tìm cách giảm số vòng lặp lồng nhau (ví dụ dùng sort(), dict, set, mảng cộng dồn).
+                  </div>
+                )}
               </div>
             )}
 

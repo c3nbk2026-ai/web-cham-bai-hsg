@@ -39,3 +39,5 @@ next-env.d.ts
 .env
 credentials.json
 .vercel
+# Ma PIN ro cua hoc sinh: chi de giao vien in, KHONG day len GitHub
+MA_PIN_HOC_SINH.csv

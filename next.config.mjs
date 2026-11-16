@@ -11,6 +11,7 @@ const nextConfig = {
     // Dòng này bảo Vercel đóng gói thư mục đó vào máy chủ chấm bài.
     outputFileTracingIncludes: {
       '/api/grade': ['./private-data/**/*'],
+      '/api/login': ['./private-data/ma-pin.json'],
     },
   },
 };
